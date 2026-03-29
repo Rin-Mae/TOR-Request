@@ -114,15 +114,45 @@ window.closeModal = function (modalId = 'detailsModal') {
 };
 
 /**
- * Setup modal click-outside closing
+ * Navigation: Go to dashboard
  */
-function setupModalCloseOnClickOutside(modalId = 'detailsModal') {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.addEventListener('click', function (e) {
-            if (e.target === this) {
-                window.closeModal(modalId);
-            }
-        });
-    }
-}
+window.goToDashboard = function () {
+    window.location.href = '/dashboard';
+};
+
+/**
+ * Navigation: Go to all requests
+ */
+window.goToAllRequests = function () {
+    window.location.href = '/admin/all-requests';
+};
+
+/**
+ * Navigation: Go to pending requests
+ */
+window.goToPendingRequests = function () {
+    window.location.href = '/admin/pending-requests';
+};
+
+/**
+ * Navigation: Go to processing requests
+ */
+window.goToProcessing = function () {
+    window.location.href = '/admin/processing';
+};
+
+/**
+ * Navigation: Go to user management
+ */
+window.goToUserManagement = function () {
+    window.location.href = '/admin/users';
+};
+
+/**
+ * Navigation: Go to admin settings
+ */
+window.goToSettings = function () {
+    window.location.href = '/admin/settings';
+};
+
+

@@ -3,12 +3,45 @@
  */
 let allRequests = [];
 let filteredRequests = [];
+let currentPage = 1;
+let totalPages = 1;
+const itemsPerPage = 5;
 
-async function loadPendingRequests() {
+/**
+ * Get paginated requests (already paginated from server)
+ */
+function getPaginatedRequests() {
+    return filteredRequests;
+}
+
+/**
+ * Get total pages
+ */
+function getTotalPages() {
+    return totalPages;
+}
+
+/**
+ * Format date to MM/DD/YYYY format
+ */
+function formatDateMMDDYYYY(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${month}/${day}/${year}`;
+}
+
+async function loadPendingRequests(page = 1) {
     try {
-        const response = await api.get('/api/tor-requests');
-        allRequests = response.data.filter(r => r.status === 'pending');
+        const response = await api.get(`/api/tor-requests?status=pending&page=${page}&per_page=${itemsPerPage}`);
+        allRequests = response.data.data;
         filteredRequests = [...allRequests];
+        totalPages = response.data.last_page;
+        currentPage = page;
         displayRequests();
     } catch (error) {
         console.error('Failed to load requests:', error);
@@ -24,17 +57,23 @@ function displayRequests() {
     const emptyState = document.getElementById('emptyState');
     const table = document.getElementById('requestsTable');
     const tbody = document.getElementById('requestsBody');
+    const paginationContainer = document.getElementById('requestsPagination');
 
     if (loading) loading.style.display = 'none';
 
     if (filteredRequests.length === 0) {
         if (emptyState) emptyState.style.display = 'block';
         if (table) table.style.display = 'none';
+        if (paginationContainer) paginationContainer.style.display = 'none';
     } else {
         if (emptyState) emptyState.style.display = 'none';
         if (table) table.style.display = 'table';
         
-        tbody.innerHTML = filteredRequests.map(req => `
+        currentPage = 1; // Reset to first page when data changes
+        const paginatedRequests = getPaginatedRequests();
+        const totalPages = getTotalPages();
+        
+        tbody.innerHTML = paginatedRequests.map(req => `
             <tr>
                 <td data-label="Student ID">${req.student_id || '-'}</td>
                 <td data-label="Full Name">${req.full_name}</td>
@@ -42,12 +81,20 @@ function displayRequests() {
                 <td data-label="Purpose">${req.purpose || '-'}</td>
                 <td data-label="Status"><span class="status-badge status-${req.status}">${formatStatus(req.status)}</span></td>
                 <td data-label="Actions" class="actions">
-                    <button class="btn btn-view" onclick="viewRequestDetails('${req.id}')">View</button>
-                    <button class="btn btn-approve" onclick="approveRequest('${req.id}')">Approve</button>
-                    <button class="btn btn-cancel" onclick="cancelRequest('${req.id}')">Cancel</button>
+                    <button class="btn btn-view" title="View Details" onclick="viewRequestDetails('${req.id}')"><i class="fas fa-eye"></i></button>
+                    <button class="btn btn-approve" title="Approve" onclick="approveRequest('${req.id}')"><i class="fas fa-check"></i></button>
+                    <button class="btn btn-cancel" title="Reject" onclick="cancelRequest('${req.id}')"><i class="fas fa-times"></i></button>
                 </td>
             </tr>
         `).join('');
+        
+        // Update pagination controls
+        if (paginationContainer) {
+            paginationContainer.style.display = totalPages > 1 ? 'flex' : 'none';
+            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = currentPage === totalPages;
+        }
     }
 }
 
@@ -69,7 +116,7 @@ window.viewRequestDetails = function (id) {
         </div>
         <div class="detail-row">
             <div class="detail-label">Date of Birth:</div>
-            <div class="detail-value">${req.birthdate ? new Date(req.birthdate).toLocaleDateString() : 'N/A'}</div>
+            <div class="detail-value">${req.birthdate ? formatDateMMDDYYYY(req.birthdate) : 'N/A'}</div>
         </div>
         <div class="detail-row">
             <div class="detail-label">Place of Birth:</div>
@@ -84,10 +131,6 @@ window.viewRequestDetails = function (id) {
             <div class="detail-value">${req.course}</div>
         </div>
         <div class="detail-row">
-            <div class="detail-label">Degree:</div>
-            <div class="detail-value">${req.degree || 'N/A'}</div>
-        </div>
-        <div class="detail-row">
             <div class="detail-label">Purpose:</div>
             <div class="detail-value">${req.purpose || 'N/A'}</div>
         </div>
@@ -97,7 +140,7 @@ window.viewRequestDetails = function (id) {
         </div>
         <div class="detail-row">
             <div class="detail-label">Requested Date:</div>
-            <div class="detail-value">${new Date(req.created_at).toLocaleDateString()}</div>
+            <div class="detail-value">${formatDateMMDDYYYY(req.created_at)}</div>
         </div>
     `;
 
@@ -130,20 +173,52 @@ window.approveRequest = async function (id) {
 };
 
 /**
- * Cancel a pending request
+ * reject a pending request
  */
+let rejectionRequestId = null;
+
 window.cancelRequest = async function (id) {
-    if (!confirm('Are you sure you want to cancel this request?')) return;
+    rejectionRequestId = id;
+    document.getElementById('rejectionReason').value = '';
+    document.getElementById('rejectionModal').classList.add('show');
+};
+
+/**
+ * Submit rejection with reason
+ */
+window.submitRejection = async function (event) {
+    event.preventDefault();
+
+    if (!rejectionRequestId) return;
+
+    const reason = document.getElementById('rejectionReason').value.trim();
+
+    if (!reason) {
+        alert('Please provide a reason for rejection');
+        return;
+    }
 
     try {
-        await api.put(`/api/tor-requests/${id}`, { status: 'rejected' });
-        allRequests = allRequests.filter(r => r.id != id);
-        filteredRequests = filteredRequests.filter(r => r.id != id);
+        await api.put(`/api/tor-requests/${rejectionRequestId}`, { 
+            status: 'rejected',
+            remarks: reason
+        });
+        allRequests = allRequests.filter(r => r.id != rejectionRequestId);
+        filteredRequests = filteredRequests.filter(r => r.id != rejectionRequestId);
         displayRequests();
+        closeRejectionModal();
         closeDetailsModal();
     } catch (error) {
-        alert(error.response?.data?.message || 'Failed to cancel request');
+        alert(error.response?.data?.message || 'Failed to reject request');
     }
+};
+
+/**
+ * Close rejection modal
+ */
+window.closeRejectionModal = function () {
+    document.getElementById('rejectionModal').classList.remove('show');
+    rejectionRequestId = null;
 };
 
 /**
@@ -208,6 +283,26 @@ function setupSidebarActive() {
         }
     });
 }
+
+/**
+ * Go to previous page
+ */
+window.previousPage = function() {
+    if (currentPage > 1) {
+        loadPendingRequests(currentPage - 1);
+        window.scrollTo(0, 0);
+    }
+};
+
+/**
+ * Go to next page
+ */
+window.nextPage = function() {
+    if (currentPage < totalPages) {
+        loadPendingRequests(currentPage + 1);
+        window.scrollTo(0, 0);
+    }
+};
 
 // Load data on page load
 loadUserInfo();

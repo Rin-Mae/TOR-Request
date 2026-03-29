@@ -23,12 +23,15 @@ class TORRequest extends Model
         'purpose',
         'status',
         'remarks',
+        'approved_by',
+        'approved_at',
     ];
 
     protected $casts = [
         'birthdate' => 'date',
         'requested_at' => 'datetime',
         'completed_at' => 'datetime',
+        'approved_at' => 'datetime',
         'deleted_at' => 'datetime',
     ];
 
@@ -38,5 +41,13 @@ class TORRequest extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the admin who approved the request
+     */
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
     }
 }

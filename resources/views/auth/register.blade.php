@@ -28,7 +28,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="middle_name">Middle Name</label>
+                    <label for="middle_name">Middle Name (Optional)</label>
                     <input type="text" id="middle_name" name="middle_name" class="form-control">
                     <div class="error-message" id="middle_nameError"></div>
                 </div>
@@ -52,6 +52,16 @@
                     <label for="student_id">Student ID</label>
                     <input type="text" id="student_id" name="student_id" class="form-control" required>
                     <div class="error-message" id="student_idError"></div>
+                </div>
+            </div>
+
+            <!-- Contact Number Row -->
+            <div class="form-row two-columns">
+                <div class="form-group">
+                    <label for="contact_number">Contact Number</label>
+                    <input type="tel" id="contact_number" name="contact_number" class="form-control" required
+                        pattern="[0-9\-\+\s\(\)]+">
+                    <div class="error-message" id="contact_numberError"></div>
                 </div>
             </div>
 

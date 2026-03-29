@@ -12,7 +12,6 @@
 <body>
     <aside class="sidebar">
         <div class="sidebar-header">
-            <div class="profile-avatar" id="profileAvatar">A</div>
             <h1 id="profileName">Admin</h1>
             <p class="user-info" id="userInfo"></p>
         </div>
@@ -31,6 +30,7 @@
             <li>
                 <button onclick="window.location.href='/admin/pending-requests'" type="button">
                     <span>Pending Requests</span>
+                    <span class="badge" id="adminPendingBadge" style="display: none;">0</span>
                 </button>
             </li>
             <li>
@@ -41,6 +41,11 @@
             <li>
                 <button onclick="window.location.href='/admin/users'" type="button">
                     <span>User Management</span>
+                </button>
+            </li>
+            <li>
+                <button onclick="window.location.href='/admin/settings'" type="button">
+                    <span>Settings</span>
                 </button>
             </li>
         </ul>
@@ -88,6 +93,15 @@
                             <tbody id="activityLogsBody">
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- Pagination Controls for Activity Logs -->
+                    <div id="activityLogsPagination" class="pagination-controls" style="display: none;">
+                        <button id="activityLogsPrevBtn" onclick="previousActivityLogsPage()" class="pagination-btn">←
+                            Previous</button>
+                        <span id="activityLogsPageInfo" class="pagination-info">Page 1 of 1</span>
+                        <button id="activityLogsNextBtn" onclick="nextActivityLogsPage()" class="pagination-btn">Next
+                            →</button>
                     </div>
                 </div>
             </div>

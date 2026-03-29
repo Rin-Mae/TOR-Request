@@ -4,12 +4,45 @@
 let allRequests = [];
 let filteredRequests = [];
 let currentViewingRequestId = null;
+let currentPage = 1;
+let totalPages = 1;
+const itemsPerPage = 5;
 
-async function loadAllRequests() {
+/**
+ * Get paginated requests (already paginated from server)
+ */
+function getPaginatedRequests() {
+    return filteredRequests;
+}
+
+/**
+ * Get total pages
+ */
+function getTotalPages() {
+    return totalPages;
+}
+
+/**
+ * Format date to MM/DD/YYYY format
+ */
+function formatDateMMDDYYYY(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${month}/${day}/${year}`;
+}
+
+async function loadAllRequests(page = 1) {
     try {
-        const response = await api.get('/api/tor-requests');
-        allRequests = response.data;
+        const response = await api.get(`/api/tor-requests?page=${page}&per_page=${itemsPerPage}`);
+        allRequests = response.data.data;
         filteredRequests = [...allRequests];
+        totalPages = response.data.last_page;
+        currentPage = page;
         displayRequests();
     } catch (error) {
         console.error('Failed to load requests:', error);
@@ -25,29 +58,44 @@ function displayRequests() {
     const emptyState = document.getElementById('emptyState');
     const table = document.getElementById('requestsTable');
     const tbody = document.getElementById('requestsBody');
+    const paginationContainer = document.getElementById('requestsPagination');
 
     if (loading) loading.style.display = 'none';
 
     if (filteredRequests.length === 0) {
         if (emptyState) emptyState.style.display = 'block';
         if (table) table.style.display = 'none';
+        if (paginationContainer) paginationContainer.style.display = 'none';
     } else {
         if (emptyState) emptyState.style.display = 'none';
         if (table) table.style.display = 'table';
         
-        tbody.innerHTML = filteredRequests.map(req => `
+        currentPage = 1; // Reset to first page when data changes
+        const paginatedRequests = getPaginatedRequests();
+        const totalPages = getTotalPages();
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        
+        tbody.innerHTML = paginatedRequests.map((req, index) => `
             <tr>
-                <td data-label="ID">${req.id}</td>
+                <td data-label="No.">${startIndex + index + 1}</td>
                 <td data-label="Student ID">${req.student_id || '-'}</td>
                 <td data-label="Full Name">${req.full_name}</td>
                 <td data-label="Course">${req.course}</td>
                 <td data-label="Purpose">${req.purpose || '-'}</td>
                 <td data-label="Status"><span class="status-badge status-${req.status}">${formatStatus(req.status)}</span></td>
                 <td data-label="Actions" class="actions">
-                    <button class="btn btn-view" onclick="viewTORRequestDetails(${req.id})">View</button>
+                    <button class="btn btn-view" title="View Details" onclick="viewTORRequestDetails(${req.id})"><i class="fas fa-eye"></i></button>
                 </td>
             </tr>
         `).join('');
+        
+        // Update pagination controls
+        if (paginationContainer) {
+            paginationContainer.style.display = totalPages > 1 ? 'flex' : 'none';
+            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = currentPage === totalPages;
+        }
     }
 }
 
@@ -71,7 +119,7 @@ window.viewTORRequestDetails = function (id) {
         </div>
         <div class="detail-row">
             <div class="detail-label">Date of Birth:</div>
-            <div class="detail-value">${req.birthdate ? new Date(req.birthdate).toLocaleDateString() : 'N/A'}</div>
+            <div class="detail-value">${req.birthdate ? formatDateMMDDYYYY(req.birthdate) : 'N/A'}</div>
         </div>
         <div class="detail-row">
             <div class="detail-label">Place of Birth:</div>
@@ -86,14 +134,6 @@ window.viewTORRequestDetails = function (id) {
             <div class="detail-value">${req.course}</div>
         </div>
         <div class="detail-row">
-            <div class="detail-label">Degree:</div>
-            <div class="detail-value">${req.degree || 'N/A'}</div>
-        </div>
-        <div class="detail-row">
-            <div class="detail-label">Year of Graduation:</div>
-            <div class="detail-value">${req.year_of_graduation || 'N/A'}</div>
-        </div>
-        <div class="detail-row">
             <div class="detail-label">Purpose:</div>
             <div class="detail-value">${req.purpose || 'N/A'}</div>
         </div>
@@ -103,7 +143,7 @@ window.viewTORRequestDetails = function (id) {
         </div>
         <div class="detail-row">
             <div class="detail-label">Requested Date:</div>
-            <div class="detail-value">${new Date(req.created_at).toLocaleDateString()}</div>
+            <div class="detail-value">${formatDateMMDDYYYY(req.created_at)}</div>
         </div>
         ${req.remarks ? `<div class="detail-row">
             <div class="detail-label">Remarks:</div>
@@ -113,6 +153,12 @@ window.viewTORRequestDetails = function (id) {
 
     document.getElementById('torRequestContent').innerHTML = content;
     document.getElementById('torRequestModal').classList.add('show');
+
+    // Show send email button only if status is ready_for_pickup or approved
+    const sendEmailBtn = document.getElementById('sendEmailBtn');
+    if (sendEmailBtn) {
+        sendEmailBtn.style.display = (req.status === 'ready_for_pickup' || req.status === 'approved') ? 'block' : 'none';
+    }
 };
 
 /**
@@ -120,19 +166,30 @@ window.viewTORRequestDetails = function (id) {
  */
 window.closeTORRequestModal = function () {
     document.getElementById('torRequestModal').classList.remove('show');
-    currentViewingRequestId = null;
 };
 
 /**
  * Open edit TOR request modal
  */
 window.openEditTORModal = function () {
-    closeTORRequestModal();
     const req = allRequests.find(r => r.id == currentViewingRequestId);
-    if (!req) return;
+    if (!req) {
+        closeTORRequestModal();
+        return;
+    }
 
+    // Close details modal and open edit modal
+    closeTORRequestModal();
+    
+    // Pre-fill the form with current values
     document.getElementById('torStatus').value = req.status;
     document.getElementById('torRemarks').value = req.remarks || '';
+    
+    // Clear previous error messages
+    document.getElementById('statusError').textContent = '';
+    document.getElementById('remarksError').textContent = '';
+    
+    // Show edit modal
     document.getElementById('editTORModal').classList.add('show');
 };
 
@@ -141,6 +198,46 @@ window.openEditTORModal = function () {
  */
 window.closeEditTORModal = function () {
     document.getElementById('editTORModal').classList.remove('show');
+    currentViewingRequestId = null;
+    // Reset form
+    document.getElementById('editTORForm').reset();
+};
+
+/**
+ * Send ready-for-pickup email to student
+ */
+window.sendReadyForPickupEmail = async function () {
+    if (!currentViewingRequestId) {
+        alert('Error: No request selected');
+        return;
+    }
+
+    const req = allRequests.find(r => r.id == currentViewingRequestId);
+    if (!req) {
+        alert('Error: Request not found');
+        return;
+    }
+
+    // Confirm before sending
+    if (!confirm(`Send "Ready for Pickup" notification email to the student?`)) {
+        return;
+    }
+
+    try {
+        const response = await api.post(`/api/tor-requests/${currentViewingRequestId}/send-ready-email`);
+        
+        // Close modal
+        closeTORRequestModal();
+        
+        // Show success message
+        alert(`✓ Email sent successfully!\n\nThe student has been notified that their TOR is ready for pickup.`);
+        
+    } catch (error) {
+        console.error('Failed to send email:', error);
+        
+        const message = error.response?.data?.message || 'Failed to send email. Please try again.';
+        alert('Error: ' + message);
+    }
 };
 
 /**
@@ -149,7 +246,14 @@ window.closeEditTORModal = function () {
 window.handleEditTORSubmit = async function (event) {
     event.preventDefault();
 
-    if (!currentViewingRequestId) return;
+    if (!currentViewingRequestId) {
+        alert('Error: No request selected');
+        return;
+    }
+
+    // Clear previous error messages
+    document.getElementById('statusError').textContent = '';
+    document.getElementById('remarksError').textContent = '';
 
     const formData = {
         status: document.getElementById('torStatus').value,
@@ -168,29 +272,29 @@ window.handleEditTORSubmit = async function (event) {
 
         closeEditTORModal();
         displayRequests();
-        showSuccess('TOR request updated successfully');
+        
+        // Show success message
+        const statusText = formatStatus(formData.status);
+        alert(`✓ TOR request status updated to "${statusText}" successfully`);
+        
     } catch (error) {
         console.error('Failed to update request:', error);
+        
+        // Display validation errors
         if (error.response?.data?.errors) {
             const errors = error.response.data.errors;
             Object.keys(errors).forEach(key => {
                 const errorElement = document.getElementById(key + 'Error');
                 if (errorElement) {
-                    errorElement.textContent = errors[key][0];
+                    errorElement.textContent = errors[key][0] || 'Error updating ' + key;
                 }
             });
+        } else {
+            const message = error.response?.data?.message || 'Failed to update request. Please try again.';
+            alert('Error: ' + message);
         }
     }
 };
-
-/**
- * Show success message
- */
-function showSuccess(message) {
-    // You can implement a toast or alert here
-    alert(message);
-    loadAllRequests(); // Reload to get latest data
-}
 
 /**
  * Apply the filters function - work with existing implementation
@@ -290,6 +394,26 @@ document.addEventListener('click', (e) => {
         closeEditTORModal();
     }
 });
+
+/**
+ * Go to previous page
+ */
+window.previousPage = function() {
+    if (currentPage > 1) {
+        loadAllRequests(currentPage - 1);
+        window.scrollTo(0, 0);
+    }
+};
+
+/**
+ * Go to next page
+ */
+window.nextPage = function() {
+    if (currentPage < totalPages) {
+        loadAllRequests(currentPage + 1);
+        window.scrollTo(0, 0);
+    }
+};
 
 // Load data on page load
 loadUserInfo();

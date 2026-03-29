@@ -46,19 +46,26 @@ class UserManagementController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'first_name' => 'required|string|max:255',
-            'middle_name' => 'nullable|string|max:255',
-            'last_name' => 'required|string|max:255',
+            'first_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\'-]+$/',
+            'middle_name' => 'nullable|string|max:255|regex:/^[a-zA-Z\s\'-]*$/',
+            'last_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\'-]+$/',
+            'suffix' => 'nullable|string|max:255|regex:/^[a-zA-Z\s\.]*$/',
             'email' => 'required|email|unique:users,email',
             'student_id' => 'nullable|string|unique:users,student_id',
             'password' => 'required|string|min:8|confirmed',
             'role' => 'required|in:admin,student',
+        ], [
+            'first_name.regex' => 'First name can only contain letters, spaces, hyphens, and apostrophes.',
+            'middle_name.regex' => 'Middle name can only contain letters, spaces, hyphens, and apostrophes.',
+            'last_name.regex' => 'Last name can only contain letters, spaces, hyphens, and apostrophes.',
+            'suffix.regex' => 'Suffix can only contain letters, spaces, and periods.',
         ]);
 
         $user = User::create([
             'first_name' => $validated['first_name'],
             'middle_name' => $validated['middle_name'] ?? null,
             'last_name' => $validated['last_name'],
+            'suffix' => $validated['suffix'] ?? null,
             'email' => $validated['email'],
             'student_id' => $validated['student_id'] ?? null,
             'password' => Hash::make($validated['password']),
@@ -85,18 +92,25 @@ class UserManagementController extends Controller
     public function update(Request $request, User $user)
     {
         $validated = $request->validate([
-            'first_name' => 'required|string|max:255',
-            'middle_name' => 'nullable|string|max:255',
-            'last_name' => 'required|string|max:255',
+            'first_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\'-]+$/',
+            'middle_name' => 'nullable|string|max:255|regex:/^[a-zA-Z\s\'-]*$/',
+            'last_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\'-]+$/',
+            'suffix' => 'nullable|string|max:255|regex:/^[a-zA-Z\s\.]*$/',
             'email' => 'required|email|unique:users,email,' . $user->id,
             'student_id' => 'nullable|string|unique:users,student_id,' . $user->id,
             'password' => 'nullable|string|min:8|confirmed',
             'role' => 'required|in:admin,student',
+        ], [
+            'first_name.regex' => 'First name can only contain letters, spaces, hyphens, and apostrophes.',
+            'middle_name.regex' => 'Middle name can only contain letters, spaces, hyphens, and apostrophes.',
+            'last_name.regex' => 'Last name can only contain letters, spaces, hyphens, and apostrophes.',
+            'suffix.regex' => 'Suffix can only contain letters, spaces, and periods.',
         ]);
 
         $user->first_name = $validated['first_name'];
         $user->middle_name = $validated['middle_name'] ?? null;
         $user->last_name = $validated['last_name'];
+        $user->suffix = $validated['suffix'] ?? null;
         $user->email = $validated['email'];
         $user->student_id = $validated['student_id'] ?? null;
         $user->role = $validated['role'];

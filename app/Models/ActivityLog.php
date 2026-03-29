@@ -36,10 +36,10 @@ class ActivityLog extends Model
     /**
      * Log an activity
      */
-    public static function log($action, $description = null, $model = null, $modelId = null, $changes = null)
+    public static function log($action, $description = null, $model = null, $modelId = null, $changes = null, $userId = null)
     {
         return self::create([
-            'user_id' => auth()->id(),
+            'user_id' => $userId ?? auth()->id(),
             'action' => $action,
             'description' => $description,
             'model' => $model,

@@ -15,8 +15,9 @@
             <img src="{{ asset('images/NC Logo.png') }}" alt="NC Logo" style="max-width: 150px; height: auto;">
         </div>
         <div id="successMessage" class="success-message"></div>
+        <div id="errorAlert" class="error-alert"></div>
 
-        <form id="loginForm" action="/login" method="POST">
+        <form id="loginForm" onsubmit="handleLoginSubmit(event)">
             @csrf
             <div class="form-group">
                 <label for="email">Email Address</label>

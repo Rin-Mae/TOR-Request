@@ -35,6 +35,37 @@ api.interceptors.response.use(
 );
 
 let requests = [];
+let currentPage = 1;
+let totalPages = 1;
+const itemsPerPage = 5;
+
+/**
+ * Get paginated requests (already paginated from server)
+ */
+function getPaginatedRequests() {
+    return requests;
+}
+
+/**
+ * Get total pages
+ */
+function getTotalPages() {
+    return totalPages;
+}
+
+/**
+ * Format date to MM/DD/YYYY format
+ */
+function formatDateMMDDYYYY(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${month}/${day}/${year}`;
+}
 
 /**
  * Load user information from API
@@ -43,27 +74,35 @@ async function loadUserInfo() {
     try {
         const response = await api.get('/api/user');
         const user = response.data;
-        document.getElementById('profileName').textContent = user.full_name;
-        document.getElementById('profileAvatar').textContent = user.full_name.charAt(0).toUpperCase();
+        const profileNameEl = document.getElementById('profileName');
+        const profileAvatarEl = document.getElementById('profileAvatar');
+        if (profileNameEl) profileNameEl.textContent = user.full_name;
+        if (profileAvatarEl) profileAvatarEl.textContent = user.full_name?.charAt(0).toUpperCase() || 'S';
     } catch (error) {
         console.error('Failed to load user:', error);
-        localStorage.removeItem('auth_token');
-        window.location.href = '/login';
+        // Don't redirect here - let the interceptor handle 401s
     }
 }
 
 /**
- * Load all TOR requests
+ * Load TOR requests with server-side pagination
  */
-async function loadRequests() {
+async function loadRequests(page = 1) {
     try {
-        const response = await api.get('/api/tor-requests');
-        requests = response.data;
+        const response = await api.get(`/api/tor-requests?page=${page}&per_page=${itemsPerPage}`);
+        requests = response.data.data;
+        totalPages = response.data.last_page;
+        currentPage = page;
         displayRequests();
     } catch (error) {
         console.error('Failed to load requests:', error);
-        if (error.response?.status === 401) {
-            window.location.href = '/login';
+        // Don't redirect here - let the interceptor handle 401s
+        const loading = document.getElementById('loading');
+        const emptyState = document.getElementById('emptyState');
+        if (loading) loading.style.display = 'none';
+        if (emptyState) {
+            emptyState.style.display = 'block';
+            emptyState.textContent = 'Failed to load requests. Please try again.';
         }
     }
 }
@@ -76,29 +115,70 @@ function displayRequests() {
     const emptyState = document.getElementById('emptyState');
     const table = document.getElementById('requestsTable');
     const tbody = document.getElementById('requestsBody');
+    const paginationContainer = document.getElementById('requestsPagination');
 
     loading.style.display = 'none';
 
     if (requests.length === 0) {
         emptyState.style.display = 'block';
         table.style.display = 'none';
+        if (paginationContainer) paginationContainer.style.display = 'none';
     } else {
         emptyState.style.display = 'none';
         table.style.display = 'table';
-        tbody.innerHTML = requests.map(req => `
+        
+        const paginatedRequests = getPaginatedRequests();
+        const totalPages = getTotalPages();
+        
+        tbody.innerHTML = paginatedRequests.map(req => {
+            let approvedByText = '-';
+            if (req.approver && req.approver.full_name) {
+                approvedByText = req.approver.full_name;
+            }
+            
+            return `
             <tr>
                 <td>${req.student_id}</td>
                 <td>${req.course}</td>
                 <td><span class="status-badge status-${req.status}">${formatStatus(req.status)}</span></td>
-                <td>${new Date(req.created_at).toLocaleDateString()}</td>
+                <td>${approvedByText}</td>
+                <td>${formatDateMMDDYYYY(req.created_at)}</td>
                 <td class="actions">
-                    <button class="btn-view" onclick="viewDetails('${req.id}')">View</button>
-                    ${req.status === 'pending' ? `<button class="btn-delete" onclick="deleteRequest('${req.id}')">Delete</button>` : ''}
+                    <button class="btn-view" title="View Details" onclick="viewDetails('${req.id}')"><i class="fas fa-eye"></i></button>
+                    ${req.status === 'pending' ? `<button class="btn-delete" title="Delete Request" onclick="deleteRequest('${req.id}')"><i class="fas fa-trash-alt"></i></button>` : ''}
                 </td>
             </tr>
-        `).join('');
+        `}).join('');
+        
+        // Update pagination controls
+        if (paginationContainer) {
+            paginationContainer.style.display = totalPages > 1 ? 'flex' : 'none';
+            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = currentPage === totalPages;
+        }
     }
 }
+
+/**
+ * Go to previous page
+ */
+window.previousPage = function() {
+    if (currentPage > 1) {
+        loadRequests(currentPage - 1);
+        window.scrollTo(0, 0);
+    }
+};
+
+/**
+ * Go to next page
+ */
+window.nextPage = function() {
+    if (currentPage < totalPages) {
+        loadRequests(currentPage + 1);
+        window.scrollTo(0, 0);
+    }
+};
 
 /**
  * Format status text for display
@@ -128,7 +208,7 @@ window.viewDetails = function (id) {
         </div>
         <div class="detail-row">
             <div class="detail-label">Date of Birth:</div>
-            <div class="detail-value">${new Date(req.birthdate).toLocaleDateString()}</div>
+            <div class="detail-value">${formatDateMMDDYYYY(req.birthdate)}</div>
         </div>
         <div class="detail-row">
             <div class="detail-label">Place of Birth:</div>
@@ -150,14 +230,17 @@ window.viewDetails = function (id) {
             <div class="detail-label">Status:</div>
             <div class="detail-value"><span class="status-badge status-${req.status}">${formatStatus(req.status)}</span></div>
         </div>
-        <div class="detail-row">
-            <div class="detail-label">Requested Date:</div>
-            <div class="detail-value">${new Date(req.created_at).toLocaleDateString()}</div>
-        </div>
-        ${req.remarks ? `<div class="detail-row">
+        ${req.status === 'rejected' && req.remarks ? `<div class="detail-row" style="background: #fff3cd; padding: 1rem; border-radius: 4px; border-left: 4px solid #ffc107;">
+            <div class="detail-label" style="color: #856404;">Rejection Reason:</div>
+            <div class="detail-value" style="color: #856404;">${req.remarks}</div>
+        </div>` : req.remarks ? `<div class="detail-row">
             <div class="detail-label">Remarks:</div>
             <div class="detail-value">${req.remarks}</div>
         </div>` : ''}
+        <div class="detail-row">
+            <div class="detail-label">Requested Date:</div>
+            <div class="detail-value">${formatDateMMDDYYYY(req.created_at)}</div>
+        </div>
     `;
 
     document.getElementById('detailsContent').innerHTML = content;
@@ -220,6 +303,13 @@ window.goToCreateRequest = function () {
  */
 window.goToViewRequests = function () {
     window.location.href = '/tor/requests';
+};
+
+/**
+ * Navigation: Go to settings
+ */
+window.goToSettings = function () {
+    window.location.href = '/settings';
 };
 
 // Close modal when clicking outside

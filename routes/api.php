@@ -5,7 +5,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\TORRequestController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\Admin\UserManagementController;
+use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 
 // Public API Routes (Authentication)
 Route::post('/login', [LoginController::class, 'login']);
@@ -17,8 +19,13 @@ Route::middleware('auth:web')->group(function () {
     Route::get('/user', [LoginController::class, 'user']);
     Route::post('/logout', [LoginController::class, 'logout']);
 
+    // Settings Routes
+    Route::post('/settings', [SettingsController::class, 'update']);
+
     // TOR Request Routes
     Route::apiResource('tor-requests', TORRequestController::class);
+    Route::post('/tor-requests/{torRequest}/send-ready-email', [TORRequestController::class, 'sendReadyForPickupEmail']);
+    Route::get('/tor-requests-pending-count', [TORRequestController::class, 'getPendingCount']);
 
     // Admin User Management Routes
     Route::prefix('admin')->group(function () {

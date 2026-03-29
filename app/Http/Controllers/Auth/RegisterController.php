@@ -31,6 +31,7 @@ class RegisterController extends Controller
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
             'student_id' => 'required|string|unique:users,student_id',
+            'contact_number' => 'required|string|max:20',
         ]);
 
         $user = User::create([
@@ -40,14 +41,17 @@ class RegisterController extends Controller
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'student_id' => $validated['student_id'],
+            'contact_number' => $validated['contact_number'],
             'role' => 'student', // Default role for new registrations
         ]);
 
-        // Log activity
+        // Log activity (pass user_id since user isn't authenticated yet)
         ActivityLog::log(
             'created',
             'New user registered: ' . $validated['first_name'] . ' ' . $validated['last_name'],
             'User',
+            $user->id,
+            null,
             $user->id
         );
 

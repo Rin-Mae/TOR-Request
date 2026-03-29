@@ -20,8 +20,18 @@ window.handleLoginSubmit = async function (event) {
     event.preventDefault();
 
     // Clear previous messages
-    document.getElementById('errorAlert').classList.remove('show');
-    document.getElementById('successMessage').classList.remove('show');
+    const errorAlert = document.getElementById('errorAlert');
+    const successMessage = document.getElementById('successMessage');
+    if (errorAlert) {
+        errorAlert.classList.remove('show');
+        errorAlert.textContent = '';
+    }
+    if (successMessage) {
+        successMessage.classList.remove('show');
+        successMessage.textContent = '';
+    }
+    // Clear field errors
+    document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
 
     const email = document.getElementById('email')?.value;
     const password = document.getElementById('password')?.value;
@@ -52,15 +62,15 @@ window.handleLoginSubmit = async function (event) {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Login';
 
-        const message = error.response?.data?.message || 'Login failed. Please check your credentials.';
-        showError(message);
-
         // Show field-specific errors if available
         if (error.response?.status === 422 && error.response?.data?.errors) {
             const errors = error.response.data.errors;
             for (const field in errors) {
                 showFieldError(field, errors[field][0]);
             }
+        } else {
+            const message = error.response?.data?.message || 'Login failed. Please check your credentials.';
+            showError(message);
         }
     }
 };
@@ -81,11 +91,12 @@ window.handleRegisterSubmit = async function (event) {
     const lastName = document.getElementById('last_name')?.value;
     const email = document.getElementById('email')?.value;
     const studentId = document.getElementById('student_id')?.value;
+    const contactNumber = document.getElementById('contact_number')?.value;
     const password = document.getElementById('password')?.value;
     const passwordConfirmation = document.getElementById('password_confirmation')?.value;
 
     // Basic validation
-    if (!firstName || !lastName || !email || !studentId || !password || !passwordConfirmation) {
+    if (!firstName || !lastName || !email || !studentId || !contactNumber || !password || !passwordConfirmation) {
         showError('Please fill in all required fields');
         return;
     }
@@ -106,6 +117,7 @@ window.handleRegisterSubmit = async function (event) {
             last_name: lastName,
             email,
             student_id: studentId,
+            contact_number: contactNumber,
             password,
             password_confirmation: passwordConfirmation,
         });
@@ -182,7 +194,7 @@ function clearFieldError(fieldName) {
  * Setup field error clearing on input
  */
 function setupFieldErrorClear() {
-    const fields = ['first_name', 'middle_name', 'last_name', 'email', 'student_id', 'password', 'password_confirmation'];
+    const fields = ['first_name', 'middle_name', 'last_name', 'email', 'student_id', 'contact_number', 'password', 'password_confirmation'];
     fields.forEach(field => {
         const element = document.getElementById(field);
         if (element) {

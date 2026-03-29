@@ -55,11 +55,19 @@ async function loadUserInfo() {
 }
 
 /**
- * Load student request statistics
+ * Load student request statistics (non-blocking, loads after page renders)
  */
 async function loadStatistics() {
+    // Only load statistics if the elements exist on the page
+    const statsLoader = document.getElementById('statsLoading');
+    if (!statsLoader) {
+        return;
+    }
+
     try {
-        const response = await fetch('/api/tor-requests', {
+        // Load first 5 items of each status to compute totals quickly
+        // This is much faster than loading 100 items
+        const response = await fetch('/api/tor-requests?per_page=5', {
             credentials: 'same-origin',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
@@ -71,23 +79,39 @@ async function loadStatistics() {
             throw new Error(`Failed to load statistics: ${response.status}`);
         }
 
-        const requests = await response.json();
+        const responseData = await response.json();
+        
+        // Handle paginated response
+        const requests = responseData.data || [];
+        const total = responseData.total || requests.length;
+        
+        // Count statuses from what we have
+        let pending = 0, processing = 0, completed = 0;
+        
+        if (Array.isArray(requests)) {
+            pending = requests.filter(r => r.status === 'pending').length;
+            processing = requests.filter(r => r.status === 'processing').length;
+            completed = requests.filter(r => r.status === 'approved' || r.status === 'ready_for_pickup').length;
+        }
 
-        const total = requests.length;
-        const pending = requests.filter(r => r.status === 'pending').length;
-        const processing = requests.filter(r => r.status === 'processing').length;
-        const completed = requests.filter(r => r.status === 'approved' || r.status === 'ready_for_pickup').length;
+        const totalEl = document.getElementById('totalRequests');
+        const pendingEl = document.getElementById('pendingRequests');
+        const processingEl = document.getElementById('processingRequests');
+        const completedEl = document.getElementById('completedRequests');
+        const statsGridEl = document.getElementById('statsGrid');
 
-        document.getElementById('totalRequests').textContent = total;
-        document.getElementById('pendingRequests').textContent = pending;
-        document.getElementById('processingRequests').textContent = processing;
-        document.getElementById('completedRequests').textContent = completed;
+        if (totalEl) totalEl.textContent = total;
+        if (pendingEl) pendingEl.textContent = pending;
+        if (processingEl) processingEl.textContent = processing;
+        if (completedEl) completedEl.textContent = completed;
 
-        document.getElementById('statsLoading').style.display = 'none';
-        document.getElementById('statsGrid').style.display = 'grid';
+        if (statsLoader) statsLoader.style.display = 'none';
+        if (statsGridEl) statsGridEl.style.display = 'grid';
     } catch (error) {
         console.error('Failed to load statistics:', error);
-        document.getElementById('statsLoading').textContent = 'No requests yet. Start by creating a new one!';
+        if (statsLoader) {
+            statsLoader.textContent = 'No requests yet. Start by creating a new one!';
+        }
     }
 }
 
@@ -110,6 +134,13 @@ window.goToCreateRequest = function () {
  */
 window.goToViewRequests = function () {
     window.location.href = '/tor/requests';
+};
+
+/**
+ * Navigation: Go to settings
+ */
+window.goToSettings = function () {
+    window.location.href = '/settings';
 };
 
 /**
@@ -136,4 +167,9 @@ window.handleLogout = async function () {
 
 // Load data on page load
 loadUserInfo();
-loadStatistics();
+
+// Load statistics without blocking - fire and forget
+// This allows the page to render faster
+setTimeout(() => {
+    loadStatistics();
+}, 100); // Small delay to ensure DOM is ready

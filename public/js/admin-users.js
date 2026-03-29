@@ -1,37 +1,78 @@
 /**
  * Load all users
  */
+let allUsers = [];
+let currentPage = 1;
+const itemsPerPage = 5;
+
+/**
+ * Get paginated users
+ */
+function getPaginatedUsers() {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return allUsers.slice(startIndex, endIndex);
+}
+
+/**
+ * Get total pages
+ */
+function getTotalPages() {
+    return Math.ceil(allUsers.length / itemsPerPage);
+}
+
 async function loadUsers() {
     try {
         const response = await api.get('/api/admin/users');
-        const users = response.data.users;
-
-        const tbody = document.getElementById('usersTableBody');
-        tbody.innerHTML = '';
-
-        if (users.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">No users found</td></tr>';
-            return;
-        }
-
-        users.forEach(user => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td data-label="First Name">${user.first_name}</td>
-                <td data-label="Middle Name">${user.middle_name || '-'}</td>
-                <td data-label="Last Name">${user.last_name}</td>
-                <td data-label="Email">${user.email}</td>
-                <td data-label="Student ID">${user.student_id || '-'}</td>
-                <td data-label="Role"><span class="role-badge ${user.role}">${user.role}</span></td>
-                <td data-label="Actions">
-                    <button onclick="editUser(${user.id})" class="btn-edit">Edit</button>
-                    <button onclick="deleteUser(${user.id})" class="btn-delete">Delete</button>
-                </td>
-            `;
-            tbody.appendChild(row);
-        });
+        allUsers = response.data.users;
+        currentPage = 1;
+        displayUsers();
     } catch (error) {
         showError('Failed to load users: ' + (error.response?.data?.message || error.message));
+    }
+}
+
+/**
+ * Display users in table with pagination
+ */
+function displayUsers() {
+    const tbody = document.getElementById('usersTableBody');
+    const paginationContainer = document.getElementById('usersPagination');
+    
+    tbody.innerHTML = '';
+
+    if (allUsers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">No users found</td></tr>';
+        if (paginationContainer) paginationContainer.style.display = 'none';
+        return;
+    }
+
+    const paginatedUsers = getPaginatedUsers();
+    const totalPages = getTotalPages();
+    
+    paginatedUsers.forEach(user => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td data-label="First Name">${user.first_name}</td>
+            <td data-label="Middle Name">${user.middle_name || '-'}</td>
+            <td data-label="Last Name">${user.last_name}</td>
+            <td data-label="Email">${user.email}</td>
+            <td data-label="Student ID">${user.student_id || '-'}</td>
+            <td data-label="Role"><span class="role-badge ${user.role}">${user.role}</span></td>
+            <td data-label="Actions">
+                <button onclick="editUser(${user.id})" class="btn-edit" title="Edit User"><i class="fas fa-edit"></i></button>
+                <button onclick="deleteUser(${user.id})" class="btn-delete" title="Delete User"><i class="fas fa-trash-alt"></i></button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+    
+    // Update pagination controls
+    if (paginationContainer) {
+        paginationContainer.style.display = totalPages > 1 ? 'flex' : 'none';
+        document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+        document.getElementById('prevBtn').disabled = currentPage === 1;
+        document.getElementById('nextBtn').disabled = currentPage === totalPages;
     }
 }
 
@@ -61,6 +102,7 @@ async function editUser(userId) {
         document.getElementById('firstName').value = user.first_name;
         document.getElementById('middleName').value = user.middle_name || '';
         document.getElementById('lastName').value = user.last_name;
+        document.getElementById('suffix').value = user.suffix || '';
         document.getElementById('email').value = user.email;
         document.getElementById('studentId').value = user.student_id || '';
         document.getElementById('role').value = user.role;
@@ -97,6 +139,7 @@ async function handleUserFormSubmit(event) {
         first_name: document.getElementById('firstName').value,
         middle_name: document.getElementById('middleName').value,
         last_name: document.getElementById('lastName').value,
+        suffix: document.getElementById('suffix').value,
         email: document.getElementById('email').value,
         student_id: document.getElementById('studentId').value,
         password: document.getElementById('password').value,
@@ -213,6 +256,30 @@ window.onclick = function (event) {
 /**
  * Load users on page load
  */
+
+/**
+ * Go to previous page
+ */
+window.previousPage = function() {
+    if (currentPage > 1) {
+        currentPage--;
+        displayUsers();
+        window.scrollTo(0, 0);
+    }
+};
+
+/**
+ * Go to next page
+ */
+window.nextPage = function() {
+    const totalPages = getTotalPages();
+    if (currentPage < totalPages) {
+        currentPage++;
+        displayUsers();
+        window.scrollTo(0, 0);
+    }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     loadUserInfo();
     loadUsers();

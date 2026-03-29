@@ -5,7 +5,9 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\TORRequestController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\Admin\UserManagementController;
+use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 
 // Authentication Routes
 Route::middleware('guest')->group(function () {
@@ -42,8 +44,11 @@ Route::middleware('auth')->group(function () {
     // TOR Request Routes
     Route::get('/tor/create', [TORRequestController::class, 'create'])->name('tor.create');
     Route::get('/tor/requests', function () {
-        return view('tor.requests');
+        return view('student.tor.requests');
     })->name('tor.requests');
+    
+    // Student Settings
+    Route::get('/settings', [SettingsController::class, 'show'])->name('settings.show');
     
     // Admin pending requests
     Route::get('/admin/pending-requests', function () {
@@ -62,6 +67,9 @@ Route::middleware('auth')->group(function () {
     
     // Admin user management
     Route::get('/admin/users', [UserManagementController::class, 'index'])->name('admin.users');
+    
+    // Admin Settings
+    Route::get('/admin/settings', [AdminSettingsController::class, 'show'])->name('admin.settings.show');
 });
 
 // Redirect root to login or dashboard

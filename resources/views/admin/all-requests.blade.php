@@ -6,13 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>All TOR Requests - Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ asset('css/admin-common.css') }}">
 </head>
 
 <body>
     <aside class="sidebar">
         <div class="sidebar-header">
-            <div class="profile-avatar" id="profileAvatar">A</div>
             <h1 id="profileName">Admin</h1>
             <p class="user-info" id="userInfo"></p>
         </div>
@@ -31,6 +31,7 @@
             <li>
                 <button onclick="window.location.href='/admin/pending-requests'" type="button">
                     <span>Pending Requests</span>
+                    <span class="badge" id="adminPendingBadge" style="display: none;">0</span>
                 </button>
             </li>
             <li>
@@ -41,6 +42,11 @@
             <li>
                 <button onclick="window.location.href='/admin/users'" type="button">
                     <span>User Management</span>
+                </button>
+            </li>
+            <li>
+                <button onclick="window.location.href='/admin/settings'" type="button">
+                    <span>Settings</span>
                 </button>
             </li>
         </ul>
@@ -86,7 +92,7 @@
                 <table class="requests-table" id="requestsTable" style="display: none;">
                     <thead>
                         <tr>
-                            <th>ID</th>
+                            <th>No.</th>
                             <th>Student ID</th>
                             <th>Full Name</th>
                             <th>Course</th>
@@ -98,6 +104,13 @@
                     <tbody id="requestsBody">
                     </tbody>
                 </table>
+
+                <!-- Pagination Controls -->
+                <div id="requestsPagination" class="pagination-controls" style="display: none;">
+                    <button id="prevBtn" onclick="previousPage()" class="pagination-btn">← Previous</button>
+                    <span id="pageInfo" class="pagination-info">Page 1 of 1</span>
+                    <button id="nextBtn" onclick="nextPage()" class="pagination-btn">Next →</button>
+                </div>
             </div>
         </div>
     </main>
@@ -111,7 +124,10 @@
             </div>
             <div style="display: flex; gap: 1rem; margin-top: 2rem;">
                 <button type="button" class="btn-primary" onclick="openEditTORModal()">Edit Status</button>
-                <button type="button" class="btn-cancel" onclick="closeTORRequestModal()">Close</button>
+                <button id="sendEmailBtn" type="button" class="btn-primary"
+                    style="background-color: #27ae60; display: none;" onclick="sendReadyForPickupEmail()">
+                    <i class="fas fa-envelope"></i> Send Notification
+                </button>
             </div>
         </div>
     </div>
@@ -150,7 +166,6 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="{{ asset('js/admin-common.js') }}"></script>
     <script src="{{ asset('js/admin-all-requests.js') }}"></script>
-</body>
 </body>
 
 </html>

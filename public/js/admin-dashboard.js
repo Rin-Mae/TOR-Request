@@ -1,6 +1,26 @@
 /**
  * Load admin dashboard statistics
  */
+let allActivityLogs = [];
+let activityLogsCurrentPage = 1;
+const activityLogsItemsPerPage = 5;
+
+/**
+ * Get paginated activity logs
+ */
+function getPaginatedActivityLogs() {
+    const startIndex = (activityLogsCurrentPage - 1) * activityLogsItemsPerPage;
+    const endIndex = startIndex + activityLogsItemsPerPage;
+    return allActivityLogs.slice(startIndex, endIndex);
+}
+
+/**
+ * Get total pages for activity logs
+ */
+function getActivityLogsTotalPages() {
+    return Math.ceil(allActivityLogs.length / activityLogsItemsPerPage);
+}
+
 async function loadStatistics() {
     try {
         const response = await api.get('/api/tor-requests');
@@ -41,35 +61,9 @@ async function loadStatistics() {
 async function loadActivityLogs() {
     try {
         const response = await api.get('/api/admin/activity-logs');
-        const activityLogs = response.data?.activity_logs || [];
-
-        const tbody = document.getElementById('activityLogsBody');
-        if (!tbody) return;
-        
-        tbody.innerHTML = '';
-
-        if (activityLogs.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem; color: #999;">No activity logs found</td></tr>';
-        } else {
-            activityLogs.forEach(log => {
-                const row = document.createElement('tr');
-                const actionBadge = `<span class="activity-action ${log.action}">${log.action}</span>`;
-                
-                row.innerHTML = `
-                    <td data-label="User">${log.user_name || 'Unknown'}</td>
-                    <td data-label="Action">${actionBadge}</td>
-                    <td data-label="Description">${log.description || log.model || '-'}</td>
-                    <td data-label="Date & Time">${log.created_at || ''}</td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        // Show activity logs and hide loading
-        const activityLoading = document.getElementById('activityLoading');
-        const activityLogsContainer = document.getElementById('activityLogsContainer');
-        if (activityLoading) activityLoading.style.display = 'none';
-        if (activityLogsContainer) activityLogsContainer.style.display = 'block';
+        allActivityLogs = response.data?.activity_logs || [];
+        activityLogsCurrentPage = 1;
+        displayActivityLogs();
 
     } catch (error) {
         console.error('Failed to load activity logs:', error);
@@ -78,6 +72,53 @@ async function loadActivityLogs() {
             activityLoading.textContent = 'Activity logs feature not yet initialized. Please run migrations.';
         }
     }
+}
+
+/**
+ * Display activity logs with pagination
+ */
+function displayActivityLogs() {
+    const tbody = document.getElementById('activityLogsBody');
+    const paginationContainer = document.getElementById('activityLogsPagination');
+    
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+
+    if (allActivityLogs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem; color: #999;">No activity logs found</td></tr>';
+        if (paginationContainer) paginationContainer.style.display = 'none';
+    } else {
+        const paginatedLogs = getPaginatedActivityLogs();
+        const totalPages = getActivityLogsTotalPages();
+        
+        paginatedLogs.forEach(log => {
+            const row = document.createElement('tr');
+            const actionBadge = `<span class="activity-action ${log.action}">${log.action}</span>`;
+            
+            row.innerHTML = `
+                <td data-label="User">${log.user_name || 'Unknown'}</td>
+                <td data-label="Action">${actionBadge}</td>
+                <td data-label="Description">${log.description || log.model || '-'}</td>
+                <td data-label="Date & Time">${log.created_at || ''}</td>
+            `;
+            tbody.appendChild(row);
+        });
+        
+        // Update pagination controls
+        if (paginationContainer) {
+            paginationContainer.style.display = totalPages > 1 ? 'flex' : 'none';
+            document.getElementById('activityLogsPageInfo').textContent = `Page ${activityLogsCurrentPage} of ${totalPages}`;
+            document.getElementById('activityLogsPrevBtn').disabled = activityLogsCurrentPage === 1;
+            document.getElementById('activityLogsNextBtn').disabled = activityLogsCurrentPage === totalPages;
+        }
+    }
+
+    // Show activity logs and hide loading
+    const activityLoading = document.getElementById('activityLoading');
+    const activityLogsContainer = document.getElementById('activityLogsContainer');
+    if (activityLoading) activityLoading.style.display = 'none';
+    if (activityLogsContainer) activityLogsContainer.style.display = 'block';
 }
 
 /**
@@ -97,6 +138,26 @@ window.goToProcessingRequests = function () {
 
 window.goToAllRequests = function () {
     window.location.href = '/admin/all-requests';
+};
+
+/**
+ * Activity logs pagination
+ */
+window.previousActivityLogsPage = function() {
+    if (activityLogsCurrentPage > 1) {
+        activityLogsCurrentPage--;
+        displayActivityLogs();
+        window.scrollTo(0, 0);
+    }
+};
+
+window.nextActivityLogsPage = function() {
+    const totalPages = getActivityLogsTotalPages();
+    if (activityLogsCurrentPage < totalPages) {
+        activityLogsCurrentPage++;
+        displayActivityLogs();
+        window.scrollTo(0, 0);
+    }
 };
 
 /**
@@ -122,6 +183,10 @@ function setupSidebarActive() {
 
 // Load data on page load
 loadUserInfo();
-loadStatistics();
-loadActivityLogs();
 setupSidebarActive();
+
+// Load statistics and activity logs without blocking page render
+setTimeout(() => {
+    loadStatistics();
+    loadActivityLogs();
+}, 100);

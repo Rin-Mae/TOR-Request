@@ -14,7 +14,7 @@
         }
 
         body {
-            background: #f5f5f5;
+            background: #f0f8f0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             min-height: 100vh;
@@ -99,6 +99,23 @@
 
         .sidebar-menu .icon {
             font-size: 1.2rem;
+        }
+
+        /* Badge notification style */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #ff4444;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-left: auto;
+            padding: 2px;
+            min-width: 24px;
         }
 
         header {
@@ -335,6 +352,89 @@
             color: #ddd;
         }
 
+        .file-preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .file-preview-item {
+            position: relative;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #f9f9f9;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .file-preview-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-preview-content {
+            width: 100%;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f0f0f0;
+            position: relative;
+        }
+
+        .file-preview-content img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .file-preview-icon {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: #999;
+        }
+
+        .file-preview-name {
+            padding: 0.75rem;
+            font-size: 0.85rem;
+            text-align: center;
+            word-break: break-word;
+            color: #333;
+            background: white;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .file-remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255, 67, 67, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+            z-index: 10;
+        }
+
+        .file-remove-btn:hover {
+            background: rgba(255, 67, 67, 1);
+        }
+
         @media (max-width: 600px) {
             body {
                 flex-direction: column;
@@ -382,7 +482,6 @@
 <body>
     <aside class="sidebar">
         <div class="sidebar-header">
-            <div class="profile-avatar" id="profileAvatar">S</div>
             <h1 id="profileName">Student</h1>
             <p class="user-info" id="userInfo"></p>
         </div>
@@ -401,6 +500,12 @@
             <li>
                 <button onclick="goToViewRequests()" type="button">
                     <span>My Requests</span>
+                    <span class="badge" id="studentPendingBadge" style="display: none;">0</span>
+                </button>
+            </li>
+            <li>
+                <button onclick="goToSettings()" type="button">
+                    <span>Settings</span>
                 </button>
             </li>
         </ul>
@@ -554,6 +659,7 @@
                                 accept=".pdf,.jpg,.jpeg,.png" />
                             <small>PDF, JPG, or PNG format allowed</small>
                             <span class="error-message" id="birthCertificateError"></span>
+                            <div id="birthCertificatePreviewContainer" style="margin-top: 1rem;"></div>
                         </div>
                     </div>
 
@@ -563,6 +669,7 @@
                             <input type="file" id="receipt" name="receipt" required accept=".pdf,.jpg,.jpeg,.png" />
                             <small>PDF, JPG, or PNG format allowed</small>
                             <span class="error-message" id="receiptError"></span>
+                            <div id="receiptPreviewContainer" style="margin-top: 1rem;"></div>
                         </div>
                     </div>
 
@@ -574,6 +681,7 @@
                                 accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
                             <small>PDF, JPG, PNG, DOC, or DOCX format allowed. You can select up to 5 files.</small>
                             <span class="error-message" id="requirementsError"></span>
+                            <div id="filePreviewContainer" style="margin-top: 1rem;"></div>
                         </div>
                     </div>
                 </div>
@@ -623,6 +731,54 @@
                 return Promise.reject(error);
             }
         );
+
+        /**
+         * Format date to MM/DD/YYYY format
+         */
+        function formatDateMMDDYYYY(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return '';
+
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${month}/${day}/${year}`;
+        }
+
+        /**
+         * Convert MM/DD/YYYY to YYYY-MM-DD for database
+         */
+        function convertDateToYYYYMMDD(dateString) {
+            if (!dateString) return '';
+            const parts = dateString.split('/');
+            if (parts.length === 3) {
+                return `${parts[2]}-${parts[0]}-${parts[1]}`;
+            }
+            return dateString;
+        }
+
+        /**
+         * Validate date format MM/DD/YYYY
+         */
+        function validateDateFormat(dateString) {
+            if (!dateString) return { valid: false, error: 'Date is required' };
+
+            // Check if it's in YYYY-MM-DD format (from type="date" input)
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+                try {
+                    const date = new Date(dateString);
+                    if (isNaN(date.getTime())) {
+                        return { valid: false, error: 'Invalid date format' };
+                    }
+                    return { valid: true };
+                } catch (e) {
+                    return { valid: false, error: 'Invalid date' };
+                }
+            }
+
+            return { valid: false, error: 'Invalid date format. Use date picker.' };
+        }
     </script>
     <script>
 
@@ -631,16 +787,18 @@
             try {
                 const response = await api.get('/api/user');
                 const user = response.data;
-                document.getElementById('profileName').textContent = user.full_name;
-                document.getElementById('profileAvatar').textContent = user.full_name.charAt(0).toUpperCase();
+                const profileNameEl = document.getElementById('profileName');
+                const profileAvatarEl = document.getElementById('profileAvatar');
+                const fullNameEl = document.getElementById('fullName');
+                const studentIdEl = document.getElementById('studentId');
 
-                // Auto-fill user fields
-                document.getElementById('fullName').value = user.full_name;
-                document.getElementById('studentId').value = user.student_id || '';
+                if (profileNameEl) profileNameEl.textContent = user.full_name;
+                if (profileAvatarEl) profileAvatarEl.textContent = user.full_name?.charAt(0).toUpperCase() || 'S';
+                if (fullNameEl) fullNameEl.value = user.full_name;
+                if (studentIdEl) studentIdEl.value = user.student_id || '';
             } catch (error) {
                 console.error('Failed to load user:', error);
-                localStorage.removeItem('auth_token');
-                window.location.href = '/login';
+                // Don't redirect here - let the interceptor handle 401s
             }
         }
 
@@ -656,6 +814,14 @@
             const requirementsInput = document.getElementById('requirements');
             if (requirementsInput.files.length > 5) {
                 document.getElementById('requirementsError').textContent = 'Maximum 5 files allowed';
+                return;
+            }
+
+            // Validate birthdate format
+            const birthdateValue = document.getElementById('birthdate').value.trim();
+            const dateValidation = validateDateFormat(birthdateValue);
+            if (!dateValidation.valid) {
+                document.getElementById('birthdateError').textContent = dateValidation.error;
                 return;
             }
 
@@ -698,8 +864,10 @@
                 successMsg.textContent = '✓ TOR request submitted successfully!';
                 successMsg.classList.add('show');
 
-                // Reset form
+                // Reset form and clear file selections
                 document.getElementById('torForm').reset();
+                selectedFiles = [];
+                document.getElementById('filePreviewContainer').innerHTML = '';
 
                 // Scroll to success message
                 successMsg.scrollIntoView({ behavior: 'smooth' });
@@ -753,7 +921,175 @@
             window.location.href = '/tor/create';
         };
 
-        // Load user info when page loads
+        window.goToSettings = function () {
+            window.location.href = '/settings';
+        };
+
+        // Handle file preview for requirements
+        let selectedFiles = [];
+
+        document.getElementById('requirements').addEventListener('change', function (e) {
+            selectedFiles = Array.from(e.target.files);
+            displayFilePreviews();
+        });
+        document.getElementById('birthCertificate').addEventListener('change', function (e) {
+            if (e.target.files.length > 0) {
+                displayFilePreview('birthCertificatePreviewContainer', e.target.files[0]);
+            } else {
+                document.getElementById('birthCertificatePreviewContainer').innerHTML = '';
+            }
+        });
+
+        document.getElementById('receipt').addEventListener('change', function (e) {
+            if (e.target.files.length > 0) {
+                displayFilePreview('receiptPreviewContainer', e.target.files[0]);
+            } else {
+                document.getElementById('receiptPreviewContainer').innerHTML = '';
+            }
+        });
+
+        function displayFilePreview(containerId, file) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+
+            const previewGrid = document.createElement('div');
+            previewGrid.className = 'file-preview-grid';
+
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-preview-item';
+
+            const isImage = file.type.startsWith('image/');
+            const isPdf = file.type === 'application/pdf';
+            const isDoc = file.type === 'application/msword' ||
+                file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+            let contentHTML = '';
+            if (isImage) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = fileItem.querySelector('img');
+                    if (img) {
+                        img.src = e.target.result;
+                    }
+                };
+                reader.readAsDataURL(file);
+                contentHTML = `
+                    <div class="file-preview-content">
+                        <img src="" alt="Preview" />
+                    </div>
+                `;
+            } else if (isPdf) {
+                contentHTML = `
+                    <div class="file-preview-content">
+                        <div class="file-preview-icon">📄</div>
+                    </div>
+                `;
+            } else if (isDoc) {
+                contentHTML = `
+                    <div class="file-preview-content">
+                        <div class="file-preview-icon">📝</div>
+                    </div>
+                `;
+            } else {
+                contentHTML = `
+                    <div class="file-preview-content">
+                        <div class="file-preview-icon">📎</div>
+                    </div>
+                `;
+            }
+
+            fileItem.innerHTML = `
+                ${contentHTML}
+                <div class="file-preview-name" title="${file.name}">${file.name}</div>
+            `;
+
+            previewGrid.appendChild(fileItem);
+            container.appendChild(previewGrid);
+        }
+
+
+        function displayFilePreviews() {
+            const container = document.getElementById('filePreviewContainer');
+            container.innerHTML = '';
+
+            if (selectedFiles.length === 0) {
+                return;
+            }
+
+            const previewGrid = document.createElement('div');
+            previewGrid.className = 'file-preview-grid';
+
+            selectedFiles.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-preview-item';
+
+                const isImage = file.type.startsWith('image/');
+                const isPdf = file.type === 'application/pdf';
+                const isDoc = file.type === 'application/msword' ||
+                    file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+                let contentHTML = '';
+                if (isImage) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        const img = fileItem.querySelector('img');
+                        if (img) {
+                            img.src = e.target.result;
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                    contentHTML = `
+                        <div class="file-preview-content">
+                            <img src="" alt="Preview" />
+                        </div>
+                    `;
+                } else if (isPdf) {
+                    contentHTML = `
+                        <div class="file-preview-content">
+                            <div class="file-preview-icon">📄</div>
+                        </div>
+                    `;
+                } else if (isDoc) {
+                    contentHTML = `
+                        <div class="file-preview-content">
+                            <div class="file-preview-icon">📝</div>
+                        </div>
+                    `;
+                } else {
+                    contentHTML = `
+                        <div class="file-preview-content">
+                            <div class="file-preview-icon">📎</div>
+                        </div>
+                    `;
+                }
+
+                fileItem.innerHTML = `
+                    ${contentHTML}
+                    <button type="button" class="file-remove-btn" onclick="removeFile(${index})">×</button>
+                    <div class="file-preview-name" title="${file.name}">${file.name}</div>
+                `;
+
+                previewGrid.appendChild(fileItem);
+            });
+
+            container.appendChild(previewGrid);
+        }
+
+        window.removeFile = function (index) {
+            selectedFiles.splice(index, 1);
+
+            // Update the file input
+            const fileInput = document.getElementById('requirements');
+            const dataTransfer = new DataTransfer();
+            selectedFiles.forEach(file => {
+                dataTransfer.items.add(file);
+            });
+            fileInput.files = dataTransfer.files;
+
+            displayFilePreviews();
+        };
+
+        // Load user info on page loads
         loadUserInfo();
     </script>
 </body>

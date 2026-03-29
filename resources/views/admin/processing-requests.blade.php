@@ -6,13 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Processing Requests - Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ asset('css/admin-common.css') }}">
 </head>
 
 <body>
     <aside class="sidebar">
         <div class="sidebar-header">
-            <div class="profile-avatar" id="profileAvatar">A</div>
             <h1 id="profileName">Admin</h1>
             <p class="user-info" id="userInfo"></p>
         </div>
@@ -31,6 +31,7 @@
             <li>
                 <button onclick="window.location.href='/admin/pending-requests'" type="button">
                     <span>Pending Requests</span>
+                    <span class="badge" id="adminPendingBadge" style="display: none;">0</span>
                 </button>
             </li>
             <li>
@@ -41,6 +42,11 @@
             <li>
                 <button onclick="window.location.href='/admin/users'" type="button">
                     <span>User Management</span>
+                </button>
+            </li>
+            <li>
+                <button onclick="window.location.href='/admin/settings'" type="button">
+                    <span>Settings</span>
                 </button>
             </li>
         </ul>
@@ -76,6 +82,14 @@
                     <tbody id="requestsBody">
                     </tbody>
                 </table>
+
+                <!-- Pagination Controls -->
+                <div id="requestsPagination" class="pagination-controls" style="display: none;">
+                    <button id="prevBtn" onclick="previousPage()" class="pagination-btn">← Previous</button>
+                    <span id="pageInfo" class="pagination-info">Page 1 of 1</span>
+                    <button id="nextBtn" onclick="nextPage()" class="pagination-btn">Next →</button>
+                </div>
+
                 <div class="empty-state" id="emptyState" style="display: none;">
                     <div class="empty-state-icon">✓</div>
                     <h3 style="color: #666; margin-bottom: 0.5rem;">No Processing Requests</h3>
@@ -92,14 +106,23 @@
             <h2>TOR Request Details</h2>
             <div id="detailsContent" style="display: flex; flex-direction: column; gap: 1rem;">
             </div>
-
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button type="button" class="btn-primary" style="background-color: #27ae60; display: none;"
+                    id="sendEmailBtn" onclick="sendReadyForPickupEmail()">
+                    <i class="fas fa-envelope"></i> Send Notification
+                </button>
+                <button type="button" class="btn-primary" onclick="releaseAndSendEmail()" id="releaseAndSendBtn"
+                    style="display: none;">
+                    <i class="fas fa-check-circle"></i> Mark Ready & Notify
+                </button>
+                <button type="button" class="btn-cancel" onclick="closeDetailsModal()">Close</button>
+            </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="{{ asset('js/admin-common.js') }}"></script>
     <script src="{{ asset('js/admin-processing-requests.js') }}"></script>
-</body>
 </body>
 
 </html>
