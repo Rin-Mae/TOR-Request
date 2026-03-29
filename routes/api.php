@@ -24,6 +24,7 @@ Route::middleware('auth:web')->group(function () {
 
     // TOR Request Routes
     Route::apiResource('tor-requests', TORRequestController::class);
+    Route::get('/tor-requests/{torRequest}/documents', [TORRequestController::class, 'getDocuments']);
     Route::post('/tor-requests/{torRequest}/send-ready-email', [TORRequestController::class, 'sendReadyForPickupEmail']);
     Route::get('/tor-requests-pending-count', [TORRequestController::class, 'getPendingCount']);
 

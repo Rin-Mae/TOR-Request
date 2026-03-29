@@ -103,7 +103,10 @@ function displayRequests() {
  */
 window.viewRequestDetails = function (id) {
     const req = allRequests.find(r => r.id == id);
-    if (!req) return;
+    if (!req) {
+        alert('Request not found');
+        return;
+    }
 
     const content = `
         <div class="detail-row">
@@ -146,6 +149,78 @@ window.viewRequestDetails = function (id) {
 
     document.getElementById('detailsContent').innerHTML = content;
     document.getElementById('detailsModal').classList.add('show');
+    
+    // Load documents separately
+    loadDocumentsForRequest(id);
+};
+
+/**
+ * Load and display documents for a TOR request
+ */
+window.loadDocumentsForRequest = async function (id) {
+    try {
+        console.log('[Documents] Fetching documents for request:', id);
+        const response = await api.get(`/api/tor-requests/${id}/documents`);
+        console.log('[Documents] API Response status:', response.status);
+        console.log('[Documents] API Response data:', response.data);
+        
+        const documents = response.data.data;
+        console.log('[Documents] Documents array:', documents);
+        console.log('[Documents] Documents count:', response.data.count);
+        
+        if (documents && Array.isArray(documents) && documents.length > 0) {
+            console.log('[Documents] displaying', documents.length, 'documents');
+            const detailsContent = document.getElementById('detailsContent');
+            const docsSection = document.createElement('div');
+            docsSection.style.marginTop = '1.5rem';
+            docsSection.style.paddingTop = '1.5rem';
+            docsSection.style.borderTop = '2px solid #eee';
+            docsSection.innerHTML = `
+                <div class="detail-row">
+                    <div class="detail-label">Attached Documents (${documents.length}):</div>
+                </div>
+                <div id="documentsList" class="documents-grid">
+                    ${documents.map((doc) => {
+                        const filePath = (doc.file_path || '').replace(/'/g, "\\'");
+                        const docName = (doc.document_name || 'Unnamed').replace(/'/g, "\\'");
+                        const fileType = (doc.file_type || 'unknown').replace(/'/g, "\\'");
+                        console.log('[Documents] Creating item for:', docName, 'at:', filePath);
+                        return `
+                            <div class="document-item" onclick="previewDocument('${filePath}', '${docName}', '${fileType}')">
+                                <div class="document-icon">
+                                    ${getFileIcon(doc.file_type)}
+                                </div>
+                                <div class="document-name">${doc.document_name}</div>
+                                <div class="document-size">${formatFileSize(doc.file_size)}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+            detailsContent.appendChild(docsSection);
+        } else {
+            console.log('[Documents] No documents found (count: ' + (documents ? documents.length : 0) + ')');
+        }
+    } catch (error) {
+        console.error('[Documents] Failed to load documents:', error);
+        console.error('[Documents] Error response:', error.response?.data);
+        console.error('[Documents] Error message:', error.message);
+        console.error('[Documents] Error status:', error.response?.status);
+        
+        // Show error message to user
+        const detailsContent = document.getElementById('detailsContent');
+        const errorSection = document.createElement('div');
+        errorSection.style.marginTop = '1.5rem';
+        errorSection.style.paddingTop = '1.5rem';
+        errorSection.style.borderTop = '2px solid #eee';
+        errorSection.innerHTML = `
+            <div class="detail-row">
+                <div class="detail-label" style="color: #e74c3c;">Documents:</div>
+                <div class="detail-value" style="color: #e74c3c;">Failed to load documents (${error.response?.status || 'error'})</div>
+            </div>
+        `;
+        detailsContent.appendChild(errorSection);
+    }
 };
 
 /**
@@ -153,6 +228,94 @@ window.viewRequestDetails = function (id) {
  */
 window.closeDetailsModal = function () {
     document.getElementById('detailsModal').classList.remove('show');
+};
+
+/**
+ * Get file icon based on file type
+ */
+function getFileIcon(fileType) {
+    const type = fileType.toLowerCase();
+    if (type.includes('pdf')) {
+        return '<i class="fas fa-file-pdf" style="font-size: 2.5rem; color: #e74c3c;"></i>';
+    } else if (type.includes('image')) {
+        return '<i class="fas fa-file-image" style="font-size: 2.5rem; color: #3498db;"></i>';
+    } else if (type.includes('word') || type.includes('document')) {
+        return '<i class="fas fa-file-word" style="font-size: 2.5rem; color: #2980b9;"></i>';
+    } else if (type.includes('sheet') || type.includes('excel')) {
+        return '<i class="fas fa-file-excel" style="font-size: 2.5rem; color: #27ae60;"></i>';
+    } else {
+        return '<i class="fas fa-file" style="font-size: 2.5rem; color: #95a5a6;"></i>';
+    }
+}
+
+/**
+ * Format file size in human-readable format
+ */
+function formatFileSize(bytes) {
+    if (!bytes) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+}
+
+/**
+ * Preview document in modal
+ */
+window.previewDocument = function (filePath, fileName, fileType) {
+    const previewContent = document.getElementById('previewContent');
+    const previewTitle = document.getElementById('previewTitle');
+    previewTitle.textContent = 'Preview: ' + fileName;
+
+    const type = fileType.toLowerCase();
+    let content = '';
+
+    if (type.includes('image')) {
+        content = `<img src="${filePath}" style="max-width: 100%; max-height: 70vh; margin: auto; display: block;">`;
+    } else if (type.includes('pdf')) {
+        content = `
+            <div style="text-align: center; padding: 2rem;">
+                <i class="fas fa-file-pdf" style="font-size: 4rem; color: #e74c3c; margin-bottom: 1rem;"></i>
+                <p style="margin: 1rem 0; font-size: 1.1rem;">PDF Document</p>
+                <a href="${filePath}" target="_blank" class="btn btn-primary" style="margin-right: 0.5rem;">
+                    <i class="fas fa-external-link-alt"></i> Open PDF
+                </a>
+                <a href="${filePath}" download class="btn btn-secondary">
+                    <i class="fas fa-download"></i> Download
+                </a>
+            </div>
+        `;
+    } else if (type.includes('word') || type.includes('document')) {
+        content = `
+            <div style="text-align: center; padding: 2rem;">
+                <i class="fas fa-file-word" style="font-size: 4rem; color: #2980b9; margin-bottom: 1rem;"></i>
+                <p style="margin: 1rem 0; font-size: 1.1rem;">Word Document</p>
+                <a href="${filePath}" download class="btn btn-primary">
+                    <i class="fas fa-download"></i> Download
+                </a>
+            </div>
+        `;
+    } else {
+        content = `
+            <div style="text-align: center; padding: 2rem;">
+                <i class="fas fa-file" style="font-size: 4rem; color: #95a5a6; margin-bottom: 1rem;"></i>
+                <p style="margin: 1rem 0; font-size: 1.1rem;">${fileName}</p>
+                <a href="${filePath}" download class="btn btn-primary">
+                    <i class="fas fa-download"></i> Download
+                </a>
+            </div>
+        `;
+    }
+
+    previewContent.innerHTML = content;
+    document.getElementById('documentPreviewModal').classList.add('show');
+};
+
+/**
+ * Close document preview modal
+ */
+window.closeDocumentPreview = function () {
+    document.getElementById('documentPreviewModal').classList.remove('show');
 };
 
 /**
@@ -308,11 +471,21 @@ window.nextPage = function() {
 loadUserInfo();
 loadPendingRequests();
 setupSidebarActive();
+startBadgeUpdate();
 
 // Setup modal close on outside click
 document.addEventListener('click', (e) => {
-    const modal = document.getElementById('detailsModal');
-    if (e.target === modal) {
+    const detailsModal = document.getElementById('detailsModal');
+    const previewModal = document.getElementById('documentPreviewModal');
+    const rejectionModal = document.getElementById('rejectionModal');
+    
+    if (e.target === detailsModal) {
         closeDetailsModal();
+    }
+    if (e.target === previewModal) {
+        closeDocumentPreview();
+    }
+    if (e.target === rejectionModal) {
+        closeRejectionModal();
     }
 });

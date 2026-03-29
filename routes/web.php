@@ -44,7 +44,7 @@ Route::middleware('auth')->group(function () {
     // TOR Request Routes
     Route::get('/tor/create', [TORRequestController::class, 'create'])->name('tor.create');
     Route::get('/tor/requests', function () {
-        return view('student.tor.requests');
+        return redirect()->route('student.dashboard');
     })->name('tor.requests');
     
     // Student Settings

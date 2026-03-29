@@ -106,8 +106,10 @@ body {
     font-size: 0.75rem;
     font-weight: bold;
     margin-left: auto;
-    padding: 2px;
+    padding: 0;
     min-width: 24px;
+    line-height: 24px;
+    text-align: center;
 }
 
 header {

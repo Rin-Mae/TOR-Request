@@ -29,14 +29,14 @@
                 </button>
             </li>
             <li>
-                <button onclick="window.location.href='/admin/pending-requests'" type="button">
-                    <span>Pending Requests</span>
-                    <span class="badge" id="adminPendingBadge" style="display: none;">0</span>
+                <button onclick="window.location.href='/admin/processing'" type="button">
+                    <span>Processing</span>
                 </button>
             </li>
             <li>
-                <button onclick="window.location.href='/admin/processing'" type="button">
-                    <span>Processing</span>
+                <button onclick="window.location.href='/admin/pending-requests'" type="button">
+                    <span>Pending Requests</span>
+                    <span class="badge" id="adminPendingBadge" style="display: none;">0</span>
                 </button>
             </li>
             <li>
@@ -63,6 +63,14 @@
 
             <div id="errorMessage" class="error-alert" style="display: none;"></div>
             <div id="successMessage" class="success-message" style="display: none;"></div>
+
+            <!-- Search Bar -->
+            <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+                <input type="text" id="searchInput" placeholder="Search by name, email, or student ID..."
+                    style="flex: 1; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95rem;">
+                <button onclick="searchUsers()" class="btn-primary" style="padding: 0.75rem 2rem;">Search</button>
+                <button onclick="clearSearch()" class="btn-cancel" style="padding: 0.75rem 2rem;">Clear</button>
+            </div>
 
             <table class="requests-table">
                 <thead>
@@ -160,11 +168,10 @@
 
                 <div class="form-group">
                     <label for="role">Role</label>
-                    <select id="role" name="role" required>
-                        <option value="">Select Role</option>
-                        <option value="student">Student</option>
-                        <option value="admin">Admin</option>
+                    <select id="role" name="role" disabled required>
+                        <option value="admin" selected>Admin</option>
                     </select>
+                    <input type="hidden" name="role" value="admin">
                     <div class="error-message" id="roleError"></div>
                 </div>
 

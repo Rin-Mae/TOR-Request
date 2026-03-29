@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class TORRequest extends Model
@@ -49,5 +50,13 @@ class TORRequest extends Model
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    /**
+     * Get the documents for this TOR request
+     */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(TORRequestDocument::class);
     }
 }

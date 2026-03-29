@@ -275,12 +275,6 @@
                 </button>
             </li>
             <li>
-                <button onclick="goToViewRequests()" type="button">
-                    <span>My Requests</span>
-                    <span class="badge" id="studentPendingBadge" style="display: none;">0</span>
-                </button>
-            </li>
-            <li>
                 <button onclick="goToSettings()" type="button" style="color: #667eea; font-weight: 500;">
                     <span>Settings</span>
                 </button>

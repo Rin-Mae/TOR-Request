@@ -155,4 +155,55 @@ window.goToSettings = function () {
     window.location.href = '/admin/settings';
 };
 
+/**
+ * Update pending requests badge in real-time
+ */
+let badgeUpdateInterval = null;
+
+async function updatePendingBadge() {
+    try {
+        const response = await api.get('/api/tor-requests?status=pending&per_page=1');
+        const pendingCount = response.data.total || 0;
+        
+        const badge = document.getElementById('adminPendingBadge');
+        if (badge) {
+            if (pendingCount > 0) {
+                badge.textContent = pendingCount;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+    } catch (error) {
+        console.error('Failed to update pending badge:', error);
+    }
+}
+
+/**
+ * Start real-time badge update (refresh every 5 seconds)
+ */
+function startBadgeUpdate() {
+    // Update immediately
+    updatePendingBadge();
+    
+    // Update every 5 seconds
+    badgeUpdateInterval = setInterval(() => {
+        updatePendingBadge();
+    }, 5000);
+}
+
+/**
+ * Stop real-time badge update
+ */
+function stopBadgeUpdate() {
+    if (badgeUpdateInterval) {
+        clearInterval(badgeUpdateInterval);
+        badgeUpdateInterval = null;
+    }
+}
+
+// Auto-start badge update when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    startBadgeUpdate();
+});
 

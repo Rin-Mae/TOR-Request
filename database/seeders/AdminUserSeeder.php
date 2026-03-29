@@ -12,7 +12,7 @@ class AdminUserSeeder extends Seeder
     use WithoutModelEvents;
 
     /**
-     * Seed the application's database with admin and student users.
+     * Seed the application's database with admin user.
      */
     public function run(): void
     {
@@ -29,30 +29,6 @@ class AdminUserSeeder extends Seeder
             ]
         );
 
-        // Create Student User
-        User::firstOrCreate(
-            ['email' => 'student@example.com'],
-            [
-                'first_name' => 'Student',
-                'middle_name' => '',
-                'last_name' => 'User',
-                'password' => Hash::make('password'),
-                'role' => 'student',
-                'student_id' => 'STU001',
-            ]
-        );
-
-        // Create Test User (Student)
-        User::firstOrCreate(
-            ['email' => 'test@example.com'],
-            [
-                'first_name' => 'Test',
-                'middle_name' => '',
-                'last_name' => 'User',
-                'password' => Hash::make('password'),
-                'role' => 'student',
-                'student_id' => 'STU002',
-            ]
-        );
+        $this->command->info('Admin user seeded successfully!');
     }
 }

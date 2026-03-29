@@ -276,14 +276,14 @@
                 </button>
             </li>
             <li>
-                <button onclick="goToPendingRequests()" type="button">
-                    <span>Pending Requests</span>
-                    <span class="badge" id="adminPendingBadge" style="display: none;">0</span>
+                <button onclick="goToProcessing()" type="button">
+                    <span>Processing</span>
                 </button>
             </li>
             <li>
-                <button onclick="goToProcessing()" type="button">
-                    <span>Processing</span>
+                <button onclick="goToPendingRequests()" type="button">
+                    <span>Pending Requests</span>
+                    <span class="badge" id="adminPendingBadge" style="display: none;">0</span>
                 </button>
             </li>
             <li>

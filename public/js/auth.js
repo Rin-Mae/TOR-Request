@@ -89,6 +89,7 @@ window.handleRegisterSubmit = async function (event) {
     const firstName = document.getElementById('first_name')?.value;
     const middleName = document.getElementById('middle_name')?.value;
     const lastName = document.getElementById('last_name')?.value;
+    const suffix = document.getElementById('suffix')?.value;
     const email = document.getElementById('email')?.value;
     const studentId = document.getElementById('student_id')?.value;
     const contactNumber = document.getElementById('contact_number')?.value;
@@ -115,6 +116,7 @@ window.handleRegisterSubmit = async function (event) {
             first_name: firstName,
             middle_name: middleName,
             last_name: lastName,
+            suffix,
             email,
             student_id: studentId,
             contact_number: contactNumber,
@@ -194,7 +196,7 @@ function clearFieldError(fieldName) {
  * Setup field error clearing on input
  */
 function setupFieldErrorClear() {
-    const fields = ['first_name', 'middle_name', 'last_name', 'email', 'student_id', 'contact_number', 'password', 'password_confirmation'];
+    const fields = ['first_name', 'middle_name', 'last_name', 'suffix', 'email', 'student_id', 'contact_number', 'password', 'password_confirmation'];
     fields.forEach(field => {
         const element = document.getElementById(field);
         if (element) {

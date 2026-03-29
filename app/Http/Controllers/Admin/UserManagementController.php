@@ -53,7 +53,7 @@ class UserManagementController extends Controller
             'email' => 'required|email|unique:users,email',
             'student_id' => 'nullable|string|unique:users,student_id',
             'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|in:admin,student',
+            'role' => 'required|in:admin',
         ], [
             'first_name.regex' => 'First name can only contain letters, spaces, hyphens, and apostrophes.',
             'middle_name.regex' => 'Middle name can only contain letters, spaces, hyphens, and apostrophes.',
@@ -99,7 +99,7 @@ class UserManagementController extends Controller
             'email' => 'required|email|unique:users,email,' . $user->id,
             'student_id' => 'nullable|string|unique:users,student_id,' . $user->id,
             'password' => 'nullable|string|min:8|confirmed',
-            'role' => 'required|in:admin,student',
+            'role' => 'required|in:admin',
         ], [
             'first_name.regex' => 'First name can only contain letters, spaces, hyphens, and apostrophes.',
             'middle_name.regex' => 'Middle name can only contain letters, spaces, hyphens, and apostrophes.',

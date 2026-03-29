@@ -29,14 +29,14 @@
                 </button>
             </li>
             <li>
-                <button class="active" onclick="window.location.href='/admin/pending-requests'" type="button">
-                    <span>Pending Requests</span>
-                    <span class="badge" id="adminPendingBadge" style="display: none;">0</span>
+                <button onclick="window.location.href='/admin/processing'" type="button">
+                    <span>Processing</span>
                 </button>
             </li>
             <li>
-                <button onclick="window.location.href='/admin/processing'" type="button">
-                    <span>Processing</span>
+                <button class="active" onclick="window.location.href='/admin/pending-requests'" type="button">
+                    <span>Pending Requests</span>
+                    <span class="badge" id="adminPendingBadge" style="display: none;">0</span>
                 </button>
             </li>
             <li>
@@ -101,7 +101,7 @@
 
     <!-- View TOR Request Details Modal -->
     <div id="detailsModal" class="modal">
-        <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
             <span class="close" onclick="closeDetailsModal()">&times;</span>
             <h2>TOR Request Details</h2>
             <div id="detailsContent" style="display: flex; flex-direction: column; gap: 1rem;">
@@ -128,6 +128,17 @@
                         style="flex: 1; padding: 0.8rem; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Cancel</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Document Preview Modal -->
+    <div id="documentPreviewModal" class="modal">
+        <div class="modal-content" style="max-width: 90%; max-height: 90vh; overflow: auto;">
+            <span class="close" onclick="closeDocumentPreview()">&times;</span>
+            <h2 id="previewTitle">Document Preview</h2>
+            <div id="previewContent" style="margin-top: 1rem;">
+                <!-- Preview content will be loaded here -->
+            </div>
         </div>
     </div>
 

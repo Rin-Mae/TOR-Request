@@ -2,23 +2,27 @@
  * Load all users
  */
 let allUsers = [];
+let filteredUsers = [];
 let currentPage = 1;
 const itemsPerPage = 5;
+let isSearchMode = false;
 
 /**
  * Get paginated users
  */
 function getPaginatedUsers() {
+    const usersToDisplay = isSearchMode ? filteredUsers : allUsers;
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    return allUsers.slice(startIndex, endIndex);
+    return usersToDisplay.slice(startIndex, endIndex);
 }
 
 /**
  * Get total pages
  */
 function getTotalPages() {
-    return Math.ceil(allUsers.length / itemsPerPage);
+    const usersToDisplay = isSearchMode ? filteredUsers : allUsers;
+    return Math.ceil(usersToDisplay.length / itemsPerPage);
 }
 
 async function loadUsers() {
@@ -38,10 +42,11 @@ async function loadUsers() {
 function displayUsers() {
     const tbody = document.getElementById('usersTableBody');
     const paginationContainer = document.getElementById('usersPagination');
+    const usersToDisplay = isSearchMode ? filteredUsers : allUsers;
     
     tbody.innerHTML = '';
 
-    if (allUsers.length === 0) {
+    if (usersToDisplay.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">No users found</td></tr>';
         if (paginationContainer) paginationContainer.style.display = 'none';
         return;
@@ -280,7 +285,58 @@ window.nextPage = function() {
     }
 };
 
+/**
+ * Search users by name, email, or student ID
+ */
+function searchUsers() {
+    const searchInput = document.getElementById('searchInput').value.trim().toLowerCase();
+    
+    if (!searchInput) {
+        showError('Please enter a search term');
+        return;
+    }
+    
+    filteredUsers = allUsers.filter(user => {
+        const fullName = `${user.first_name} ${user.middle_name || ''} ${user.last_name}`.toLowerCase();
+        const email = user.email.toLowerCase();
+        const studentId = (user.student_id || '').toLowerCase();
+        
+        return fullName.includes(searchInput) || 
+               email.includes(searchInput) || 
+               studentId.includes(searchInput);
+    });
+    
+    isSearchMode = true;
+    currentPage = 1;
+    displayUsers();
+    
+    if (filteredUsers.length === 0) {
+        showSuccess(`No results matching "${searchInput}"`);
+    } else {
+        showSuccess(`Found ${filteredUsers.length} user(s)`);
+    }
+}
+
+/**
+ * Clear search and reload all users
+ */
+function clearSearch() {
+    document.getElementById('searchInput').value = '';
+    isSearchMode = false;
+    filteredUsers = [];
+    currentPage = 1;
+    displayUsers();
+    showSuccess('Search cleared');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     loadUserInfo();
     loadUsers();
+    
+    // Allow Enter key to trigger search
+    document.getElementById('searchInput')?.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            searchUsers();
+        }
+    });
 });

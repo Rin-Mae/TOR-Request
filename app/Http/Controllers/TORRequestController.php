@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\TORRequest;
+use App\Models\TORRequestDocument;
 use App\Models\ActivityLog;
 use App\Mail\TORReadyForPickupNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class TORRequestController extends Controller
 {
@@ -19,7 +22,7 @@ class TORRequestController extends Controller
     }
 
     /**
-     * Store new TOR request
+     * Store new TOR request with documents
      */
     public function store(Request $request)
     {
@@ -33,12 +36,22 @@ class TORRequestController extends Controller
             'degree' => 'nullable|string|max:255|regex:/^[a-zA-Z\s\'-]+$/',
             'year_of_graduation' => 'nullable|integer|min:1900|max:' . date('Y'),
             'purpose' => 'nullable|string|max:500|regex:/^[a-zA-Z0-9\s\'-,\.]+$/',
+            'birth_certificate' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'receipt' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'requirements' => 'required|array|max:5',
+            'requirements.*' => 'file|mimes:pdf,jpg,jpeg,png,doc,docx|max:5120',
         ], [
             'full_name.regex' => 'Full name can only contain letters, spaces, hyphens, and apostrophes.',
             'birthplace.regex' => 'Birthplace can only contain letters, spaces, hyphens, apostrophes, commas, and periods.',
             'permanent_address.regex' => 'Address can only contain letters, numbers, spaces, hyphens, apostrophes, commas, and periods.',
             'degree.regex' => 'Degree can only contain letters, spaces, hyphens, and apostrophes.',
             'purpose.regex' => 'Purpose can only contain letters, numbers, spaces, hyphens, apostrophes, commas, and periods.',
+            'birth_certificate.required' => 'Birth certificate is required',
+            'birth_certificate.file' => 'Birth certificate must be a file',
+            'receipt.required' => 'Receipt is required',
+            'receipt.file' => 'Receipt must be a file',
+            'requirements.required' => 'At least one supporting document is required',
+            'requirements.array' => 'Requirements must be an array',
         ]);
 
         $torRequest = TORRequest::create([
@@ -46,6 +59,55 @@ class TORRequestController extends Controller
             ...$validated,
             'status' => 'pending',
         ]);
+
+        // Create documents for birth certificate
+        if ($request->hasFile('birth_certificate')) {
+            $file = $request->file('birth_certificate');
+            $storagePath = 'tor_documents/' . $torRequest->id;
+            $fileName = 'birth_certificate_' . time() . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs($storagePath, $fileName, 'public');
+            
+            TORRequestDocument::create([
+                'tor_request_id' => $torRequest->id,
+                'document_name' => 'Birth Certificate or Marriage Certificate',
+                'file_path' => Storage::url($path),
+                'file_type' => $file->getMimeType(),
+                'file_size' => $file->getSize(),
+            ]);
+        }
+
+        // Create documents for receipt
+        if ($request->hasFile('receipt')) {
+            $file = $request->file('receipt');
+            $storagePath = 'tor_documents/' . $torRequest->id;
+            $fileName = 'receipt_' . time() . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs($storagePath, $fileName, 'public');
+            
+            TORRequestDocument::create([
+                'tor_request_id' => $torRequest->id,
+                'document_name' => 'Receipt',
+                'file_path' => Storage::url($path),
+                'file_type' => $file->getMimeType(),
+                'file_size' => $file->getSize(),
+            ]);
+        }
+
+        // Create documents for requirements
+        if ($request->hasFile('requirements')) {
+            foreach ($request->file('requirements') as $file) {
+                $storagePath = 'tor_documents/' . $torRequest->id;
+                $fileName = 'requirement_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $path = $file->storeAs($storagePath, $fileName, 'public');
+                
+                TORRequestDocument::create([
+                    'tor_request_id' => $torRequest->id,
+                    'document_name' => $file->getClientOriginalName(),
+                    'file_path' => Storage::url($path),
+                    'file_type' => $file->getMimeType(),
+                    'file_size' => $file->getSize(),
+                ]);
+            }
+        }
 
         // Log activity
         ActivityLog::log(
@@ -100,12 +162,57 @@ class TORRequestController extends Controller
      */
     public function show(TORRequest $torRequest)
     {
-        // Check authorization
-        if ($torRequest->user_id !== auth()->id()) {
+        $user = auth()->user();
+        
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+        
+        // Check authorization - allow admins or the request owner
+        $isAdmin = $user->role === 'admin';
+        $isOwner = $torRequest->user_id === $user->id;
+        
+        if (!$isAdmin && !$isOwner) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        return response()->json($torRequest);
+        // Load documents relationship if requested
+        if (request()->has('include') && strpos(request('include'), 'documents') !== false) {
+            $torRequest->load('documents');
+        }
+
+        return response()->json([
+            'data' => $torRequest
+        ]);
+    }
+
+    /**
+     * Get documents for a TOR request
+     */
+    public function getDocuments(TORRequest $torRequest)
+    {
+        $user = auth()->user();
+        
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+        
+        // Check authorization - allow admins or the request owner
+        $isAdmin = $user->role === 'admin';
+        $isOwner = $torRequest->user_id === $user->id;
+        
+        if (!$isAdmin && !$isOwner) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        // Use raw database query to avoid any Eloquent issues
+        $documents = DB::table('tor_request_documents')
+            ->where('tor_request_id', $torRequest->id)
+            ->get();
+        
+        return response()->json([
+            'data' => $documents
+        ]);
     }
 
     /**

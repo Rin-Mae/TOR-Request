@@ -19,8 +19,8 @@
 
         <form id="registerForm" method="POST" action="/register" onsubmit="handleRegisterSubmit(event)">
             @csrf
-            <!-- Name Fields Row -->
-            <div class="form-row three-columns">
+            <!-- Name Fields Row 1 -->
+            <div class="form-row two-columns">
                 <div class="form-group">
                     <label for="first_name">First Name</label>
                     <input type="text" id="first_name" name="first_name" class="form-control" required>
@@ -32,11 +32,20 @@
                     <input type="text" id="middle_name" name="middle_name" class="form-control">
                     <div class="error-message" id="middle_nameError"></div>
                 </div>
+            </div>
 
+            <!-- Name Fields Row 2 -->
+            <div class="form-row two-columns">
                 <div class="form-group">
                     <label for="last_name">Last Name</label>
                     <input type="text" id="last_name" name="last_name" class="form-control" required>
                     <div class="error-message" id="last_nameError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="suffix">Suffix (Optional)</label>
+                    <input type="text" id="suffix" name="suffix" class="form-control" placeholder="e.g., Jr., Sr., III">
+                    <div class="error-message" id="suffixError"></div>
                 </div>
             </div>
 
