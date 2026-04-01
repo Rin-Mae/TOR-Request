@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Pending Requests - Admin Dashboard</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/NC Logo.png') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ asset('css/admin-common.css') }}">
 </head>
@@ -29,14 +30,14 @@
                 </button>
             </li>
             <li>
-                <button onclick="window.location.href='/admin/processing'" type="button">
-                    <span>Processing</span>
-                </button>
-            </li>
-            <li>
                 <button class="active" onclick="window.location.href='/admin/pending-requests'" type="button">
                     <span>Pending Requests</span>
                     <span class="badge" id="adminPendingBadge" style="display: none;">0</span>
+                </button>
+            </li>
+            <li>
+                <button onclick="window.location.href='/admin/processing'" type="button">
+                    <span>Processing</span>
                 </button>
             </li>
             <li>
@@ -63,7 +64,24 @@
                 <div class="filter-controls">
                     <div class="filter-group" style="flex: 2;">
                         <label for="searchInput">Search (Student ID, Name, Course)</label>
-                        <input type="text" id="searchInput" placeholder="Enter search term..." onkeyup="applySearch()">
+                        <input type="text" id="searchInput" placeholder="Search by student ID, name, or course..."
+                            onkeyup="applySearch()">
+                    </div>
+                    <div class="filter-group">
+                        <label for="statusFilter">Filter by Status</label>
+                        <select id="statusFilter" onchange="applySearch()">
+                            <option value="">All Statuses</option>
+                            <option value="pending">Pending</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="sortInput">Sort by</label>
+                        <select id="sortInput" onchange="applySearch()">
+                            <option value="created_at_desc">Newest First</option>
+                            <option value="created_at_asc">Oldest First</option>
+                            <option value="name_asc">Name: A to Z</option>
+                            <option value="name_desc">Name: Z to A</option>
+                        </select>
                     </div>
                 </div>
 
@@ -71,6 +89,7 @@
                 <table class="requests-table" id="requestsTable" style="display: none;">
                     <thead>
                         <tr>
+                            <th>No.</th>
                             <th>Student ID</th>
                             <th>Full Name</th>
                             <th>Course</th>

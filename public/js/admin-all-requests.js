@@ -44,6 +44,7 @@ async function loadAllRequests(page = 1) {
         totalPages = response.data.last_page;
         currentPage = page;
         displayRequests();
+        updatePaginationButtons();
     } catch (error) {
         console.error('Failed to load requests:', error);
         showEmptyState('Failed to load requests');
@@ -70,9 +71,8 @@ function displayRequests() {
         if (emptyState) emptyState.style.display = 'none';
         if (table) table.style.display = 'table';
         
-        currentPage = 1; // Reset to first page when data changes
         const paginatedRequests = getPaginatedRequests();
-        const totalPages = getTotalPages();
+        const tableRowTotalPages = getTotalPages();
         const startIndex = (currentPage - 1) * itemsPerPage;
         
         tbody.innerHTML = paginatedRequests.map((req, index) => `
@@ -91,11 +91,26 @@ function displayRequests() {
         
         // Update pagination controls
         if (paginationContainer) {
-            paginationContainer.style.display = totalPages > 1 ? 'flex' : 'none';
-            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
-            document.getElementById('prevBtn').disabled = currentPage === 1;
-            document.getElementById('nextBtn').disabled = currentPage === totalPages;
+            paginationContainer.style.display = tableRowTotalPages > 1 ? 'flex' : 'none';
+            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${tableRowTotalPages}`;
         }
+        
+        updatePaginationButtons();
+    }
+}
+
+/**
+ * Update pagination button states
+ */
+function updatePaginationButtons() {
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    
+    if (prevBtn) {
+        prevBtn.disabled = currentPage === 1;
+    }
+    if (nextBtn) {
+        nextBtn.disabled = currentPage === totalPages;
     }
 }
 
@@ -182,12 +197,13 @@ window.loadDocumentsForRequest = async function (id) {
             console.log('[Documents] displaying', documents.length, 'documents');
             const requestContent = document.getElementById('torRequestContent');
             const docsSection = document.createElement('div');
-            docsSection.style.marginTop = '1.5rem';
-            docsSection.style.paddingTop = '1.5rem';
-            docsSection.style.borderTop = '2px solid #eee';
+            docsSection.style.marginTop = '2rem';
+            docsSection.style.paddingTop = '2rem';
+            docsSection.style.borderTop = '2px solid #ecf0f1';
             docsSection.innerHTML = `
-                <div class="detail-row">
-                    <div class="detail-label">Attached Documents (${documents.length}):</div>
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
+                    <i class="fas fa-file-upload" style="font-size: 1.5rem; color: #667eea;"></i>
+                    <div class="detail-label" style="margin: 0; font-size: 0.95rem; color: #2c3e50;">Attached Documents <span style="background: #667eea; color: white; padding: 0.15rem 0.5rem; border-radius: 20px; font-size: 0.75rem; margin-left: 0.3rem;">${documents.length} file${documents.length !== 1 ? 's' : ''}</span></div>
                 </div>
                 <div id="documentsList" class="documents-grid">
                     ${documents.map((doc) => {
@@ -487,6 +503,8 @@ window.applyFilters = function () {
     }
 
     filteredRequests = results;
+    currentPage = 1; // Reset to first page when filters change
+    updatePaginationButtons();
     displayRequests();
 };
 

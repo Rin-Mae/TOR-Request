@@ -4,6 +4,9 @@
 let allActivityLogs = [];
 let activityLogsCurrentPage = 1;
 const activityLogsItemsPerPage = 5;
+let statsRefreshInterval = null;
+let activityLogsRefreshInterval = null;
+const refreshIntervalMs = 5000; // Refresh every 5 seconds
 
 /**
  * Get paginated activity logs
@@ -20,6 +23,9 @@ function getPaginatedActivityLogs() {
 function getActivityLogsTotalPages() {
     return Math.ceil(allActivityLogs.length / activityLogsItemsPerPage);
 }
+
+// Track previous pending count for new request notifications
+let previousPendingCount = 0;
 
 async function loadStatistics() {
     try {
@@ -38,7 +44,21 @@ async function loadStatistics() {
         const forReleaseCount = document.getElementById('forReleaseCount');
         const cancelledCount = document.getElementById('cancelledCount');
 
-        if (pendingCount) pendingCount.textContent = pending;
+        if (pendingCount) {
+            const oldValue = parseInt(pendingCount.textContent) || 0;
+            pendingCount.textContent = pending;
+            
+            // Highlight and notify if pending count increased (new request incoming)
+            if (pending > oldValue) {
+                const newCount = pending - oldValue;
+                pendingCount.parentElement.classList.add('highlight-new');
+                showNotification(`🔔 ${newCount} new pending request${newCount > 1 ? 's' : ''} received!`, 'success', 5000);
+                setTimeout(() => {
+                    pendingCount.parentElement.classList.remove('highlight-new');
+                }, 2000);
+            }
+        }
+        
         if (forReleaseCount) forReleaseCount.textContent = forRelease;
         if (cancelledCount) cancelledCount.textContent = cancelled;
 
@@ -52,6 +72,29 @@ async function loadStatistics() {
         console.error('Failed to load statistics:', error);
         const statsLoading = document.getElementById('statsLoading');
         if (statsLoading) statsLoading.textContent = 'Failed to load statistics';
+    }
+}
+
+/**
+ * Start real-time statistics updates
+ */
+function startStatisticsUpdate() {
+    // Load immediately
+    loadStatistics();
+    
+    // Refresh every 5 seconds
+    statsRefreshInterval = setInterval(() => {
+        loadStatistics();
+    }, refreshIntervalMs);
+}
+
+/**
+ * Stop real-time statistics updates
+ */
+function stopStatisticsUpdate() {
+    if (statsRefreshInterval) {
+        clearInterval(statsRefreshInterval);
+        statsRefreshInterval = null;
     }
 }
 
@@ -71,6 +114,29 @@ async function loadActivityLogs() {
         if (activityLoading) {
             activityLoading.textContent = 'Activity logs feature not yet initialized. Please run migrations.';
         }
+    }
+}
+
+/**
+ * Start real-time activity logs updates
+ */
+function startActivityLogsUpdate() {
+    // Load immediately
+    loadActivityLogs();
+    
+    // Refresh every 5 seconds
+    activityLogsRefreshInterval = setInterval(() => {
+        loadActivityLogs();
+    }, refreshIntervalMs);
+}
+
+/**
+ * Stop real-time activity logs updates
+ */
+function stopActivityLogsUpdate() {
+    if (activityLogsRefreshInterval) {
+        clearInterval(activityLogsRefreshInterval);
+        activityLogsRefreshInterval = null;
     }
 }
 
@@ -185,8 +251,22 @@ function setupSidebarActive() {
 loadUserInfo();
 setupSidebarActive();
 
+// Add notification container to the page if it doesn't exist
+if (!document.getElementById('notificationContainer')) {
+    const notification = document.createElement('div');
+    notification.id = 'notificationContainer';
+    notification.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 10000;';
+    document.body.appendChild(notification);
+}
+
 // Load statistics and activity logs without blocking page render
 setTimeout(() => {
-    loadStatistics();
-    loadActivityLogs();
+    startStatisticsUpdate();
+    startActivityLogsUpdate();
 }, 100);
+
+// Cleanup intervals when user navigates away
+window.addEventListener('unload', () => {
+    stopStatisticsUpdate();
+    stopActivityLogsUpdate();
+});

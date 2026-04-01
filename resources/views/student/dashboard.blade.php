@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Student Dashboard - Online TOR Request System</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/NC Logo.png') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ asset('css/student-dashboard.css') }}">
     <link rel="stylesheet" href="{{ asset('css/tor-requests.css') }}">
@@ -84,6 +85,7 @@
                 <table id="requestsTable" class="requests-table" style="display: none;">
                     <thead>
                         <tr>
+                            <th>No.</th>
                             <th>Student ID</th>
                             <th>Course</th>
                             <th>Status</th>

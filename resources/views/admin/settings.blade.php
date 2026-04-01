@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Settings - Online TOR Request System</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/NC Logo.png') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ asset('css/admin-common.css') }}">
     <style>
@@ -276,14 +277,14 @@
                 </button>
             </li>
             <li>
-                <button onclick="goToProcessing()" type="button">
-                    <span>Processing</span>
-                </button>
-            </li>
-            <li>
                 <button onclick="goToPendingRequests()" type="button">
                     <span>Pending Requests</span>
                     <span class="badge" id="adminPendingBadge" style="display: none;">0</span>
+                </button>
+            </li>
+            <li>
+                <button onclick="goToProcessing()" type="button">
+                    <span>Processing</span>
                 </button>
             </li>
             <li>

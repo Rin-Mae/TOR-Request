@@ -43,6 +43,7 @@ async function loadPendingRequests(page = 1) {
         totalPages = response.data.last_page;
         currentPage = page;
         displayRequests();
+        updatePaginationButtons();
     } catch (error) {
         console.error('Failed to load requests:', error);
         showEmptyState('Failed to load requests');
@@ -69,12 +70,13 @@ function displayRequests() {
         if (emptyState) emptyState.style.display = 'none';
         if (table) table.style.display = 'table';
         
-        currentPage = 1; // Reset to first page when data changes
         const paginatedRequests = getPaginatedRequests();
-        const totalPages = getTotalPages();
+        const tableRowTotalPages = getTotalPages();
+        const startIndex = (currentPage - 1) * itemsPerPage;
         
-        tbody.innerHTML = paginatedRequests.map(req => `
+        tbody.innerHTML = paginatedRequests.map((req, index) => `
             <tr>
+                <td data-label="No.">${startIndex + index + 1}</td>
                 <td data-label="Student ID">${req.student_id || '-'}</td>
                 <td data-label="Full Name">${req.full_name}</td>
                 <td data-label="Course">${req.course}</td>
@@ -90,11 +92,26 @@ function displayRequests() {
         
         // Update pagination controls
         if (paginationContainer) {
-            paginationContainer.style.display = totalPages > 1 ? 'flex' : 'none';
-            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
-            document.getElementById('prevBtn').disabled = currentPage === 1;
-            document.getElementById('nextBtn').disabled = currentPage === totalPages;
+            paginationContainer.style.display = tableRowTotalPages > 1 ? 'flex' : 'none';
+            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${tableRowTotalPages}`;
         }
+        
+        updatePaginationButtons();
+    }
+}
+
+/**
+ * Update pagination button states
+ */
+function updatePaginationButtons() {
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    
+    if (prevBtn) {
+        prevBtn.disabled = currentPage === 1;
+    }
+    if (nextBtn) {
+        nextBtn.disabled = currentPage === totalPages;
     }
 }
 
@@ -150,6 +167,21 @@ window.viewRequestDetails = function (id) {
     document.getElementById('detailsContent').innerHTML = content;
     document.getElementById('detailsModal').classList.add('show');
     
+    // Show loading indicator for documents
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = 'docsLoadingIndicator';
+    loadingDiv.style.marginTop = '2rem';
+    loadingDiv.style.paddingTop = '2rem';
+    loadingDiv.style.borderTop = '2px solid #ecf0f1';
+    loadingDiv.style.textAlign = 'center';
+    loadingDiv.innerHTML = `
+        <div style="color: #667eea;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 1.5rem; margin-right: 0.5rem;"></i>
+            Loading documents...
+        </div>
+    `;
+    document.getElementById('detailsContent').appendChild(loadingDiv);
+    
     // Load documents separately
     loadDocumentsForRequest(id);
 };
@@ -159,6 +191,10 @@ window.viewRequestDetails = function (id) {
  */
 window.loadDocumentsForRequest = async function (id) {
     try {
+        // Remove loading indicator
+        const loadingDiv = document.getElementById('docsLoadingIndicator');
+        if (loadingDiv) loadingDiv.remove();
+        
         console.log('[Documents] Fetching documents for request:', id);
         const response = await api.get(`/api/tor-requests/${id}/documents`);
         console.log('[Documents] API Response status:', response.status);
@@ -172,14 +208,15 @@ window.loadDocumentsForRequest = async function (id) {
             console.log('[Documents] displaying', documents.length, 'documents');
             const detailsContent = document.getElementById('detailsContent');
             const docsSection = document.createElement('div');
-            docsSection.style.marginTop = '1.5rem';
-            docsSection.style.paddingTop = '1.5rem';
-            docsSection.style.borderTop = '2px solid #eee';
+            docsSection.style.marginTop = '2rem';
+            docsSection.style.paddingTop = '2rem';
+            docsSection.style.borderTop = '2px solid #ecf0f1';
             docsSection.innerHTML = `
-                <div class="detail-row">
-                    <div class="detail-label">Attached Documents (${documents.length}):</div>
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
+                    <i class="fas fa-file-upload" style="font-size: 1.5rem; color: #667eea;"></i>
+                    <div class="detail-label" style="margin: 0; font-size: 0.95rem; color: #2c3e50;">Attached Documents <span style="background: #667eea; color: white; padding: 0.15rem 0.5rem; border-radius: 20px; font-size: 0.75rem; margin-left: 0.3rem;">${documents.length} file${documents.length !== 1 ? 's' : ''}</span></div>
                 </div>
-                <div id="documentsList" class="documents-grid">
+                <div id="documentsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem;">
                     ${documents.map((doc) => {
                         const filePath = (doc.file_path || '').replace(/'/g, "\\'");
                         const docName = (doc.document_name || 'Unnamed').replace(/'/g, "\\'");
@@ -200,26 +237,48 @@ window.loadDocumentsForRequest = async function (id) {
             detailsContent.appendChild(docsSection);
         } else {
             console.log('[Documents] No documents found (count: ' + (documents ? documents.length : 0) + ')');
+            // Show message if no documents
+            const detailsContent = document.getElementById('detailsContent');
+            const noDocsSection = document.createElement('div');
+            noDocsSection.style.marginTop = '2rem';
+            noDocsSection.style.paddingTop = '2rem';
+            noDocsSection.style.borderTop = '2px solid #ecf0f1';
+            noDocsSection.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <i class="fas fa-file-circle-question" style="font-size: 1.5rem; color: #bdc3c7;"></i>
+                    <div class="detail-label" style="margin: 0; font-size: 1rem; color: #7f8c8d;">No documents attached to this request</div>
+                </div>
+            `;
+            detailsContent.appendChild(noDocsSection);
         }
     } catch (error) {
+        // Remove loading indicator
+        const loadingDiv = document.getElementById('docsLoadingIndicator');
+        if (loadingDiv) loadingDiv.remove();
+        
         console.error('[Documents] Failed to load documents:', error);
         console.error('[Documents] Error response:', error.response?.data);
         console.error('[Documents] Error message:', error.message);
         console.error('[Documents] Error status:', error.response?.status);
         
-        // Show error message to user
+        // Show error message to user - but don't fail silently
         const detailsContent = document.getElementById('detailsContent');
-        const errorSection = document.createElement('div');
-        errorSection.style.marginTop = '1.5rem';
-        errorSection.style.paddingTop = '1.5rem';
-        errorSection.style.borderTop = '2px solid #eee';
-        errorSection.innerHTML = `
-            <div class="detail-row">
-                <div class="detail-label" style="color: #e74c3c;">Documents:</div>
-                <div class="detail-value" style="color: #e74c3c;">Failed to load documents (${error.response?.status || 'error'})</div>
-            </div>
-        `;
-        detailsContent.appendChild(errorSection);
+        if (detailsContent) {
+            const errorSection = document.createElement('div');
+            errorSection.style.marginTop = '2rem';
+            errorSection.style.paddingTop = '2rem';
+            errorSection.style.borderTop = '2px solid #ecf0f1';
+            errorSection.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <i class="fas fa-exclamation-circle" style="font-size: 1.5rem; color: #e74c3c;"></i>
+                    <div>
+                        <div class="detail-label" style="margin: 0 0 0.5rem 0; color: #e74c3c;">Failed to load documents</div>
+                        <div style="font-size: 0.85rem; color: #c0392b;">${error.response?.data?.message || error.message || 'Unknown error'}</div>
+                    </div>
+                </div>
+            `;
+            detailsContent.appendChild(errorSection);
+        }
     }
 };
 
@@ -330,8 +389,11 @@ window.approveRequest = async function (id) {
         filteredRequests = filteredRequests.filter(r => r.id != id);
         displayRequests();
         closeDetailsModal();
+        
+        // Show success notification
+        showNotification('✓ Request approved successfully!', 'success', 5000);
     } catch (error) {
-        alert(error.response?.data?.message || 'Failed to approve request');
+        showNotification(error.response?.data?.message || 'Failed to approve request', 'error', 5000);
     }
 };
 
@@ -357,7 +419,7 @@ window.submitRejection = async function (event) {
     const reason = document.getElementById('rejectionReason').value.trim();
 
     if (!reason) {
-        alert('Please provide a reason for rejection');
+        showNotification('Please provide a reason for rejection', 'error', 5000);
         return;
     }
 
@@ -371,8 +433,11 @@ window.submitRejection = async function (event) {
         displayRequests();
         closeRejectionModal();
         closeDetailsModal();
+        
+        // Show success notification
+        showNotification('✓ Request rejected successfully!', 'success', 5000);
     } catch (error) {
-        alert(error.response?.data?.message || 'Failed to reject request');
+        showNotification(error.response?.data?.message || 'Failed to reject request', 'error', 5000);
     }
 };
 

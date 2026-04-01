@@ -28,14 +28,14 @@
                 </button>
             </li>
             <li>
-                <button onclick="window.location.href='/admin/processing'" type="button">
-                    <span>Processing</span>
-                </button>
-            </li>
-            <li>
                 <button onclick="window.location.href='/admin/pending-requests'" type="button">
                     <span>Pending Requests</span>
                     <span class="badge" id="adminPendingBadge" style="display: none;">0</span>
+                </button>
+            </li>
+            <li>
+                <button onclick="window.location.href='/admin/processing'" type="button">
+                    <span>Processing</span>
                 </button>
             </li>
             <li>

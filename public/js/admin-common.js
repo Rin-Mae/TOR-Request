@@ -202,6 +202,42 @@ function stopBadgeUpdate() {
     }
 }
 
+/**
+ * Show notification toast
+ */
+window.showNotification = function(message, type = 'info', duration = 5000) {
+    const container = document.getElementById('notificationContainer') || (() => {
+        const div = document.createElement('div');
+        div.id = 'notificationContainer';
+        div.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 10000;';
+        document.body.appendChild(div);
+        return div;
+    })();
+
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        background-color: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
+        color: white;
+        padding: 16px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        animation: slideIn 0.3s ease-out;
+        max-width: 400px;
+        word-wrap: break-word;
+    `;
+    notification.textContent = message;
+    
+    container.appendChild(notification);
+    
+    if (duration > 0) {
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => notification.remove(), 300);
+        }, duration);
+    }
+};
+
 // Auto-start badge update when page loads
 document.addEventListener('DOMContentLoaded', () => {
     startBadgeUpdate();

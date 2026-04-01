@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>My TOR Requests - Online TOR Request System</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/NC Logo.png') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ asset('css/tor-requests.css') }}">
     <style>
@@ -62,6 +63,7 @@
             <table id="requestsTable" class="requests-table" style="display: none;">
                 <thead>
                     <tr>
+                        <th>No.</th>
                         <th>Student ID</th>
                         <th>Course</th>
                         <th>Status</th>
@@ -90,6 +92,17 @@
                 <button onclick="closeModal()">&times;</button>
             </div>
             <div id="detailsContent"></div>
+        </div>
+    </div>
+
+    <!-- Document Preview Modal -->
+    <div id="documentPreviewModal" class="modal">
+        <div class="modal-content" style="max-width: 90%; max-height: 90vh; overflow: auto;">
+            <span class="close" onclick="closeDocumentPreview()">&times;</span>
+            <h2 id="previewTitle">Document Preview</h2>
+            <div id="previewContent" style="margin-top: 1rem;">
+                <!-- Preview content will be loaded here -->
+            </div>
         </div>
     </div>
 

@@ -130,14 +130,18 @@ function displayRequests() {
         const paginatedRequests = getPaginatedRequests();
         const totalPages = getTotalPages();
         
-        tbody.innerHTML = paginatedRequests.map(req => {
+        tbody.innerHTML = paginatedRequests.map((req, index) => {
             let approvedByText = '-';
             if (req.approver && req.approver.full_name) {
                 approvedByText = req.approver.full_name;
             }
             
+            // Calculate row number based on current page and index
+            const rowNumber = ((currentPage - 1) * itemsPerPage) + (index + 1);
+            
             return `
             <tr>
+                <td>${rowNumber}</td>
                 <td>${req.student_id}</td>
                 <td>${req.course}</td>
                 <td><span class="status-badge status-${req.status}">${formatStatus(req.status)}</span></td>
@@ -245,6 +249,173 @@ window.viewDetails = function (id) {
 
     document.getElementById('detailsContent').innerHTML = content;
     document.getElementById('detailsModal').classList.add('show');
+    
+    // Show loading indicator for documents
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = 'docsLoadingIndicator';
+    loadingDiv.style.marginTop = '2rem';
+    loadingDiv.style.paddingTop = '2rem';
+    loadingDiv.style.borderTop = '2px solid #ecf0f1';
+    loadingDiv.style.textAlign = 'center';
+    loadingDiv.innerHTML = `
+        <div style="color: #667eea;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 1.5rem; margin-right: 0.5rem;"></i>
+            Loading documents...
+        </div>
+    `;
+    document.getElementById('detailsContent').appendChild(loadingDiv);
+    
+    // Load documents separately
+    loadDocumentsForRequest(id);
+};
+
+/**
+ * Load and display documents for a TOR request
+ */
+window.loadDocumentsForRequest = async function (id) {
+    try {
+        // Remove loading indicator
+        const loadingDiv = document.getElementById('docsLoadingIndicator');
+        if (loadingDiv) loadingDiv.remove();
+        
+        console.log('[Documents] Fetching documents for request:', id);
+        const response = await api.get(`/api/tor-requests/${id}/documents`);
+        console.log('[Documents] API Response status:', response.status);
+        console.log('[Documents] API Response data:', response.data);
+        
+        const documents = response.data.data;
+        console.log('[Documents] Documents array:', documents);
+        console.log('[Documents] Documents count:', response.data.count);
+        
+        if (documents && Array.isArray(documents) && documents.length > 0) {
+            console.log('[Documents] displaying', documents.length, 'documents');
+            const detailsContent = document.getElementById('detailsContent');
+            const docsSection = document.createElement('div');
+            docsSection.style.marginTop = '2rem';
+            docsSection.style.paddingTop = '2rem';
+            docsSection.style.borderTop = '2px solid #ecf0f1';
+            docsSection.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem;">
+                    <i class="fas fa-file-upload" style="font-size: 1.1rem; color: #667eea;"></i>
+                    <div class="detail-label" style="margin: 0; font-size: 0.95rem; color: #2c3e50;">Attached Documents <span style="background: #667eea; color: white; padding: 0.15rem 0.5rem; border-radius: 20px; font-size: 0.75rem; margin-left: 0.3rem;">${documents.length} file${documents.length !== 1 ? 's' : ''}</span></div>
+                </div>
+                <div id="documentsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem;">
+                    ${documents.map((doc) => {
+                        const filePath = (doc.file_path || '').replace(/'/g, "\\'");
+                        const docName = (doc.document_name || 'Unnamed').replace(/'/g, "\\'");
+                        const fileType = (doc.file_type || 'unknown').replace(/'/g, "\\'");
+                        console.log('[Documents] Creating item for:', docName, 'at:', filePath);
+                        return `
+                            <div class="document-item" onclick="previewDocument('${filePath}', '${docName}', '${fileType}')">
+                                <div class="document-icon">
+                                    ${getFileIcon(doc.file_type)}
+                                </div>
+                                <div class="document-name">${doc.document_name}</div>
+                                <div class="document-size">${formatFileSize(doc.file_size)}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+            detailsContent.appendChild(docsSection);
+        } else {
+            console.log('[Documents] No documents found (count: ' + (documents ? documents.length : 0) + ')');
+        }
+    } catch (error) {
+        // Remove loading indicator
+        const loadingDiv = document.getElementById('docsLoadingIndicator');
+        if (loadingDiv) loadingDiv.remove();
+        
+        console.error('[Documents] Failed to load documents:', error);
+    }
+};
+
+/**
+ * Get file icon based on file type
+ */
+function getFileIcon(fileType) {
+    const type = fileType.toLowerCase();
+    if (type.includes('pdf')) {
+        return '<i class="fas fa-file-pdf" style="font-size: 2.5rem; color: #e74c3c;"></i>';
+    } else if (type.includes('image')) {
+        return '<i class="fas fa-file-image" style="font-size: 2.5rem; color: #3498db;"></i>';
+    } else if (type.includes('word') || type.includes('document')) {
+        return '<i class="fas fa-file-word" style="font-size: 2.5rem; color: #2980b9;"></i>';
+    } else if (type.includes('sheet') || type.includes('excel')) {
+        return '<i class="fas fa-file-excel" style="font-size: 2.5rem; color: #27ae60;"></i>';
+    } else {
+        return '<i class="fas fa-file" style="font-size: 2.5rem; color: #95a5a6;"></i>';
+    }
+}
+
+/**
+ * Format file size in human-readable format
+ */
+function formatFileSize(bytes) {
+    if (!bytes) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+}
+
+/**
+ * Preview document in modal
+ */
+window.previewDocument = function (filePath, fileName, fileType) {
+    const previewContent = document.getElementById('previewContent');
+    const previewTitle = document.getElementById('previewTitle');
+    previewTitle.textContent = 'Preview: ' + fileName;
+
+    const type = fileType.toLowerCase();
+    let content = '';
+
+    if (type.includes('image')) {
+        content = `<img src="${filePath}" style="max-width: 100%; max-height: 70vh; margin: auto; display: block;">`;
+    } else if (type.includes('pdf')) {
+        content = `
+            <div style="text-align: center; padding: 2rem;">
+                <i class="fas fa-file-pdf" style="font-size: 4rem; color: #e74c3c; margin-bottom: 1rem;"></i>
+                <p style="margin: 1rem 0; font-size: 1.1rem;">PDF Document</p>
+                <a href="${filePath}" target="_blank" class="btn btn-primary" style="margin-right: 0.5rem;">
+                    <i class="fas fa-external-link-alt"></i> Open PDF
+                </a>
+                <a href="${filePath}" download class="btn btn-secondary">
+                    <i class="fas fa-download"></i> Download
+                </a>
+            </div>
+        `;
+    } else if (type.includes('word') || type.includes('document')) {
+        content = `
+            <div style="text-align: center; padding: 2rem;">
+                <i class="fas fa-file-word" style="font-size: 4rem; color: #2980b9; margin-bottom: 1rem;"></i>
+                <p style="margin: 1rem 0; font-size: 1.1rem;">Word Document</p>
+                <a href="${filePath}" download class="btn btn-primary">
+                    <i class="fas fa-download"></i> Download
+                </a>
+            </div>
+        `;
+    } else {
+        content = `
+            <div style="text-align: center; padding: 2rem;">
+                <i class="fas fa-file" style="font-size: 4rem; color: #95a5a6; margin-bottom: 1rem;"></i>
+                <p style="margin: 1rem 0; font-size: 1.1rem;">${fileName}</p>
+                <a href="${filePath}" download class="btn btn-primary">
+                    <i class="fas fa-download"></i> Download
+                </a>
+            </div>
+        `;
+    }
+
+    previewContent.innerHTML = content;
+    document.getElementById('documentPreviewModal').classList.add('show');
+};
+
+/**
+ * Close document preview modal
+ */
+window.closeDocumentPreview = function () {
+    document.getElementById('documentPreviewModal').classList.remove('show');
 };
 
 /**
@@ -313,11 +484,24 @@ window.goToSettings = function () {
 };
 
 // Close modal when clicking outside
-document.getElementById('detailsModal').addEventListener('click', function (e) {
-    if (e.target === this) {
-        window.closeModal();
-    }
-});
+const detailsModal = document.getElementById('detailsModal');
+if (detailsModal) {
+    detailsModal.addEventListener('click', function (e) {
+        if (e.target === this) {
+            window.closeModal();
+        }
+    });
+}
+
+// Close document preview modal when clicking outside
+const documentPreviewModal = document.getElementById('documentPreviewModal');
+if (documentPreviewModal) {
+    documentPreviewModal.addEventListener('click', function (e) {
+        if (e.target === this) {
+            window.closeDocumentPreview();
+        }
+    });
+}
 
 // Load data on page load
 loadUserInfo();
